@@ -10,6 +10,7 @@ import (
 	"github.com/DataDrake/waterlog"
 	"github.com/DataDrake/waterlog/format"
 	"github.com/DataDrake/waterlog/level"
+	"github.com/nicolekellydesign/webby-api/database"
 	"github.com/nicolekellydesign/webby-api/server"
 )
 
@@ -36,11 +37,28 @@ func StartFunc(root *cmd.Root, c *cmd.Sub) {
 	logger.SetLevel(level.Info)
 	logger.SetFormat(format.Min)
 
+	file, err := os.Create("webby-api.log")
+	if err != nil {
+		logger.Fatalf("Unable to create or open log file: %s", err)
+	}
+	defer file.Close()
+
+	fileLogger := waterlog.New(file, "webby-db", log2.Ldate|log2.Ltime)
+	fileLogger.SetLevel(level.Info)
+	fileLogger.SetFormat(format.Un)
+
+	// Get our args
+	args := c.Args.(*StartArgs)
+
+	// Start our database connection
+	db, err := database.Connect(args.Username, args.Password, args.DatabaseName, fileLogger)
+	if err != nil {
+		logger.Fatalf("Unable to connect to the database: %s", err)
+	}
+
 	// Start our API endpoint listener
 	logger.Infoln("Starting the API endpoint listener")
-	server := server.Listener{
-		Port: 5000,
-	}
+	server := server.New(5000, db)
 
 	go server.Serve()
 	logger.Infoln("Now listening on 'localhost:5000'")
