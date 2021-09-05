@@ -1,6 +1,7 @@
 package database
 
 import (
+	"database/sql"
 	"fmt"
 
 	"github.com/DataDrake/waterlog"
@@ -81,9 +82,9 @@ func (db DB) AddUser(user *entities.User) error {
 
 // CheckLogin tests if the sent user is a valid user in the database.
 func (db DB) CheckLogin(user *entities.User) (bool, error) {
-	var valid bool
+	valid := false
 	err := db.db.Get(&valid, "SELECT (pwdhash = crypt($1, pwdhash)) AS pwdhash FROM auth WHERE user_name=$2;", user.Password, user.Username)
-	if err != nil {
+	if err != nil && err != sql.ErrNoRows {
 		db.log.Errorf("error checking user login: %s\n", err)
 		return false, err
 	}
