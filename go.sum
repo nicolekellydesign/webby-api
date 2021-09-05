@@ -1,0 +1,6 @@
+github.com/DataDrake/cli-ng/v2 v2.0.2 h1:7+25l25VmlERCE95glW6QKBUF13vxqAM2jasFiN02xQ=
+github.com/DataDrake/cli-ng/v2 v2.0.2/go.mod h1:bU9YaNNWWVq0eIdDsU3TCe9+7Jb398iBBoqee5EiKWQ=
+github.com/DataDrake/flair v0.5.1 h1:JHWOoBRiQGWg+k2bV2Mje2YmDtRjhMj51yDxQkzidWI=
+github.com/DataDrake/flair v0.5.1/go.mod h1:3KgdmkL8eJDbg/HdMwlHkeYH/mpSy/hsQvxYQFp9A/Y=
+github.com/DataDrake/waterlog v1.2.0 h1:T3Hs0D6YOQfz6GtViw+fYSIGpGimU41FubcxQQzaeHM=
+github.com/DataDrake/waterlog v1.2.0/go.mod h1:xSKEWChL8698jwSJSyjKPIpFpj/K5n+Eif2ztYXDjJI=
