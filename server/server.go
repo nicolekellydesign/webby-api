@@ -48,14 +48,35 @@ func (l Listener) AddUser(w http.ResponseWriter, r *http.Request) {
 
 	defer r.Body.Close()
 
-	var user entities.User
+	var req AddUserRequest
 	decoder := json.NewDecoder(r.Body)
-	if err := decoder.Decode(&user); err != nil {
+	if err := decoder.Decode(&req); err != nil {
 		SendErrMalformedBody(w)
 		return
 	}
 
-	if err := l.db.AddUser(&user); err != nil {
+	users, err := l.db.GetUsers()
+	if err != nil {
+		httpError := NewError(500, fmt.Sprintf("Internal error: %s", err.Error()))
+		httpError.Write(w)
+		return
+	}
+
+	if len(users) >= 0 {
+		if _, _, err := validateToken(req.Token); err != nil {
+			if err == errInvalidToken {
+				httpError := NewError(http.StatusUnauthorized, err.Error())
+				httpError.Write(w)
+				return
+			}
+
+			httpError := NewError(http.StatusInternalServerError, err.Error())
+			httpError.Write(w)
+			return
+		}
+	}
+
+	if err := l.db.AddUser(&req.User); err != nil {
 		httpError := NewError(500, fmt.Sprintf("Internal error: %s", err.Error()))
 		httpError.Write(w)
 		return
@@ -96,13 +117,25 @@ func (l Listener) CheckLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Send back the response
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
+	if valid {
+		token, err := generateToken(user)
+		if err != nil {
+			httpError := NewError(http.StatusInternalServerError, fmt.Sprintf("Internal error: %s", err.Error()))
+			httpError.Write(w)
+			return
+		}
 
-	encoder := json.NewEncoder(w)
-	encoder.Encode(AuthResponse{
-		valid,
-	})
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(200)
+
+		encoder := json.NewEncoder(w)
+		encoder.Encode(AuthResponse{
+			token,
+		})
+	} else {
+		httpError := NewError(http.StatusUnauthorized, "invalid login")
+		httpError.Write(w)
+	}
 }
 
 // GetUsers gets all of the users from the database.

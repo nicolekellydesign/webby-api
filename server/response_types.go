@@ -51,7 +51,7 @@ func (e HTTPError) Write(w http.ResponseWriter) {
 // AuthResponse is sent when a login is checked, and sends
 // the result of the login attempt.
 type AuthResponse struct {
-	Valid bool `json:"valid"`
+	Token string `json:"token"`
 }
 
 // UsersResponse is sent when a request to list all useres

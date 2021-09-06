@@ -18,13 +18,6 @@ type DB struct {
 }
 
 var schema = `
-CREATE TABLE IF NOT EXISTS auth (
-	id SERIAL PRIMARY KEY,
-	user_name TEXT NOT NULL,
-	token TEXT NOT NULL,
-	created_at TIMESTAMP NOT NULL
-);
-
 CREATE TABLE IF NOT EXISTS users (
 	id SERIAL PRIMARY KEY,
 	user_name TEXT NOT NULL,
@@ -100,11 +93,10 @@ func (db DB) CheckLogin(user *entities.User) (bool, error) {
 	return valid, nil
 }
 
-// GetUsers gets all of the users from the database. This only gets the
-// user name.
+// GetUsers gets all of the users from the database.
 func (db DB) GetUsers() ([]*entities.User, error) {
 	ret := make([]*entities.User, 0)
-	if err := db.db.Select(&ret, "SELECT user_name FROM users;"); err != nil {
+	if err := db.db.Select(&ret, "SELECT id, user_name FROM users;"); err != nil {
 		db.log.Errorf("error getting users from database: %s\n", err)
 		return nil, err
 	}
