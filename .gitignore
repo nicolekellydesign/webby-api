@@ -30,3 +30,4 @@ webby-cli
 *.out
 
 webby-api.log
+.signingKey

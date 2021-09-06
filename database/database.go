@@ -21,6 +21,13 @@ var schema = `
 CREATE TABLE IF NOT EXISTS auth (
 	id SERIAL PRIMARY KEY,
 	user_name TEXT NOT NULL,
+	token TEXT NOT NULL,
+	created_at TIMESTAMP NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS users (
+	id SERIAL PRIMARY KEY,
+	user_name TEXT NOT NULL,
 	pwdhash TEXT NOT NULL
 );
 
@@ -70,7 +77,7 @@ func (db DB) Close() {
 // AddUser inserts a new user with password into the database.
 func (db DB) AddUser(user *entities.User) error {
 	tx := db.db.MustBegin()
-	tx.NamedExec("INSERT INTO auth (user_name, pwdhash) VALUES (:user_name, crypt(:pwdhash, gen_salt('bf')));", user)
+	tx.NamedExec("INSERT INTO users (user_name, pwdhash) VALUES (:user_name, crypt(:pwdhash, gen_salt('bf')));", user)
 
 	if err := tx.Commit(); err != nil {
 		tx.Rollback()
@@ -84,7 +91,7 @@ func (db DB) AddUser(user *entities.User) error {
 // CheckLogin tests if the sent user is a valid user in the database.
 func (db DB) CheckLogin(user *entities.User) (bool, error) {
 	valid := false
-	err := db.db.Get(&valid, "SELECT (pwdhash = crypt($1, pwdhash)) AS pwdhash FROM auth WHERE user_name=$2;", user.Password, user.Username)
+	err := db.db.Get(&valid, "SELECT (pwdhash = crypt($1, pwdhash)) AS pwdhash FROM users WHERE user_name=$2;", user.Password, user.Username)
 	if err != nil && err != sql.ErrNoRows {
 		db.log.Errorf("error checking user login: %s\n", err)
 		return false, err
@@ -97,7 +104,7 @@ func (db DB) CheckLogin(user *entities.User) (bool, error) {
 // user name.
 func (db DB) GetUsers() ([]*entities.User, error) {
 	ret := make([]*entities.User, 0)
-	if err := db.db.Select(&ret, "SELECT user_name FROM auth;"); err != nil {
+	if err := db.db.Select(&ret, "SELECT user_name FROM users;"); err != nil {
 		db.log.Errorf("error getting users from database: %s\n", err)
 		return nil, err
 	}
