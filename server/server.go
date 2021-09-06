@@ -27,7 +27,8 @@ func New(port int, db *database.DB) *Listener {
 // Serve sets up our endpoint handlers and begins listening.
 func (l Listener) Serve() {
 	http.HandleFunc("/api/adduser", l.AddUser)  // POST
-	http.HandleFunc("/api/login", l.CheckLogin) // GET
+	http.HandleFunc("/api/login", l.CheckLogin) // POST
+	http.HandleFunc("/api/users", l.GetUsers)   // GET
 
 	addr := fmt.Sprintf("localhost:%d", l.Port)
 	http.ListenAndServe(addr, nil)
@@ -35,9 +36,13 @@ func (l Listener) Serve() {
 
 // AddUser adds a new user into the database.
 func (l Listener) AddUser(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		SendErrWrongMethod(w)
+		return
+	}
+
 	if r.Header.Get("Content-Type") != "application/json" {
-		httpError := NewError(400, "Bad request: wrong content type")
-		httpError.Write(w)
+		SendErrWrongType(w)
 		return
 	}
 
@@ -46,8 +51,7 @@ func (l Listener) AddUser(w http.ResponseWriter, r *http.Request) {
 	var user entities.User
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&user); err != nil {
-		httpError := NewError(400, "Bad request: malformed json struct")
-		httpError.Write(w)
+		SendErrMalformedBody(w)
 		return
 	}
 
@@ -63,9 +67,13 @@ func (l Listener) AddUser(w http.ResponseWriter, r *http.Request) {
 // CheckLogin looks to see if a login from the API should
 // be successful or not.
 func (l Listener) CheckLogin(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		SendErrWrongMethod(w)
+		return
+	}
+
 	if r.Header.Get("Content-Type") != "application/json" {
-		httpError := NewError(400, "Bad request: wrong content type")
-		httpError.Write(w)
+		SendErrWrongType(w)
 		return
 	}
 
@@ -75,8 +83,7 @@ func (l Listener) CheckLogin(w http.ResponseWriter, r *http.Request) {
 	var user entities.User
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&user); err != nil {
-		httpError := NewError(400, "Bad request: malformed json struct")
-		httpError.Write(w)
+		SendErrMalformedBody(w)
 		return
 	}
 
@@ -95,5 +102,29 @@ func (l Listener) CheckLogin(w http.ResponseWriter, r *http.Request) {
 	encoder := json.NewEncoder(w)
 	encoder.Encode(AuthResponse{
 		valid,
+	})
+}
+
+// GetUsers gets all of the users from the database.
+func (l Listener) GetUsers(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		SendErrWrongMethod(w)
+		return
+	}
+
+	ret, err := l.db.GetUsers()
+	if err != nil {
+		httpError := NewError(500, fmt.Sprintf("Internal error: %s", err.Error()))
+		httpError.Write(w)
+		return
+	}
+
+	// Send back the response
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	encoder := json.NewEncoder(w)
+	encoder.Encode(UsersResponse{
+		ret,
 	})
 }
