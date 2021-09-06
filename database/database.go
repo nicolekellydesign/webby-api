@@ -93,7 +93,7 @@ func (db DB) CheckLogin(user *entities.User) (bool, error) {
 }
 
 func (db DB) GetUsers() ([]*entities.User, error) {
-	var ret []*entities.User
+	ret := make([]*entities.User, 0)
 	if err := db.db.Select(&ret, "SELECT user_name FROM auth;"); err != nil {
 		db.log.Errorf("error getting users from database: %s\n", err)
 		return nil, err
