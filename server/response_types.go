@@ -7,15 +7,15 @@ import (
 	"github.com/nicolekellydesign/webby-api/entities"
 )
 
-// HttpError represents an error response for an API endpoint.
-type HttpError struct {
+// HTTPError represents an error response for an API endpoint.
+type HTTPError struct {
 	Code    int    `json:"code"`
 	Message string `json:"message"`
 }
 
 // NewError returns a new HttpError.
-func NewError(code int, message string) HttpError {
-	return HttpError{
+func NewError(code int, message string) HTTPError {
+	return HTTPError{
 		Code:    code,
 		Message: message,
 	}
@@ -40,7 +40,7 @@ func SendErrWrongType(w http.ResponseWriter) {
 }
 
 // Write writes the HttpError to the given ResponseWriter.
-func (e HttpError) Write(w http.ResponseWriter) {
+func (e HTTPError) Write(w http.ResponseWriter) {
 	w.Header().Add("Content-Type", "application/json")
 	w.WriteHeader(e.Code)
 

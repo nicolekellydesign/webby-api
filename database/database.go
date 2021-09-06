@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/DataDrake/waterlog"
+	// This is commented because I guess that's all sqlx needs
 	_ "github.com/jackc/pgx/v4/stdlib"
 	"github.com/jmoiron/sqlx"
 	"github.com/nicolekellydesign/webby-api/entities"
@@ -92,6 +93,8 @@ func (db DB) CheckLogin(user *entities.User) (bool, error) {
 	return valid, nil
 }
 
+// GetUsers gets all of the users from the database. This only gets the
+// user name.
 func (db DB) GetUsers() ([]*entities.User, error) {
 	ret := make([]*entities.User, 0)
 	if err := db.db.Select(&ret, "SELECT user_name FROM auth;"); err != nil {
