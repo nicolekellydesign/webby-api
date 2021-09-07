@@ -37,12 +37,12 @@ func (l Listener) Serve() {
 // AddUser adds a new user into the database.
 func (l Listener) AddUser(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		SendErrWrongMethod(w)
+		WriteError(w, http.StatusBadRequest, "wrong HTTP method type")
 		return
 	}
 
 	if r.Header.Get("Content-Type") != "application/json" {
-		SendErrWrongType(w)
+		WriteError(w, http.StatusBadRequest, "wrong content type")
 		return
 	}
 
@@ -51,34 +51,30 @@ func (l Listener) AddUser(w http.ResponseWriter, r *http.Request) {
 	var req AddUserRequest
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&req); err != nil {
-		SendErrMalformedBody(w)
+		WriteError(w, http.StatusBadRequest, "invalid request data")
 		return
 	}
 
 	users, err := l.db.GetUsers()
 	if err != nil {
-		httpError := NewError(500, fmt.Sprintf("Internal error: %s", err.Error()))
-		httpError.Write(w)
+		WriteError(w, http.StatusInternalServerError, fmt.Sprintf("Internal error: %s", err.Error()))
 		return
 	}
 
 	if len(users) >= 0 {
 		if _, _, err := validateToken(req.Token); err != nil {
 			if err == errInvalidToken {
-				httpError := NewError(http.StatusUnauthorized, err.Error())
-				httpError.Write(w)
+				WriteError(w, http.StatusUnauthorized, err.Error())
 				return
 			}
 
-			httpError := NewError(http.StatusInternalServerError, err.Error())
-			httpError.Write(w)
+			WriteError(w, http.StatusInternalServerError, fmt.Sprintf("Internal error: %s", err.Error()))
 			return
 		}
 	}
 
 	if err := l.db.AddUser(&req.User); err != nil {
-		httpError := NewError(500, fmt.Sprintf("Internal error: %s", err.Error()))
-		httpError.Write(w)
+		WriteError(w, http.StatusInternalServerError, fmt.Sprintf("Internal error: %s", err.Error()))
 		return
 	}
 
@@ -89,12 +85,12 @@ func (l Listener) AddUser(w http.ResponseWriter, r *http.Request) {
 // be successful or not.
 func (l Listener) CheckLogin(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		SendErrWrongMethod(w)
+		WriteError(w, http.StatusBadRequest, "wrong HTTP method type")
 		return
 	}
 
 	if r.Header.Get("Content-Type") != "application/json" {
-		SendErrWrongType(w)
+		WriteError(w, http.StatusBadRequest, "wrong content type")
 		return
 	}
 
@@ -104,15 +100,14 @@ func (l Listener) CheckLogin(w http.ResponseWriter, r *http.Request) {
 	var user entities.User
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&user); err != nil {
-		SendErrMalformedBody(w)
+		WriteError(w, http.StatusBadRequest, "invalid request data")
 		return
 	}
 
 	// Check if the login should be a success
 	valid, err := l.db.CheckLogin(&user)
 	if err != nil {
-		httpError := NewError(500, fmt.Sprintf("Internal error: %s", err.Error()))
-		httpError.Write(w)
+		WriteError(w, http.StatusInternalServerError, fmt.Sprintf("Internal error: %s", err.Error()))
 		return
 	}
 
@@ -120,8 +115,7 @@ func (l Listener) CheckLogin(w http.ResponseWriter, r *http.Request) {
 	if valid {
 		token, err := generateToken(user)
 		if err != nil {
-			httpError := NewError(http.StatusInternalServerError, fmt.Sprintf("Internal error: %s", err.Error()))
-			httpError.Write(w)
+			WriteError(w, http.StatusInternalServerError, fmt.Sprintf("Internal error: %s", err.Error()))
 			return
 		}
 
@@ -133,22 +127,20 @@ func (l Listener) CheckLogin(w http.ResponseWriter, r *http.Request) {
 			token,
 		})
 	} else {
-		httpError := NewError(http.StatusUnauthorized, "invalid login")
-		httpError.Write(w)
+		WriteError(w, http.StatusInternalServerError, fmt.Sprintf("Internal error: %s", err.Error()))
 	}
 }
 
 // GetUsers gets all of the users from the database.
 func (l Listener) GetUsers(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		SendErrWrongMethod(w)
+		WriteError(w, http.StatusBadRequest, "wrong HTTP method type")
 		return
 	}
 
 	ret, err := l.db.GetUsers()
 	if err != nil {
-		httpError := NewError(500, fmt.Sprintf("Internal error: %s", err.Error()))
-		httpError.Write(w)
+		WriteError(w, http.StatusInternalServerError, fmt.Sprintf("Internal error: %s", err.Error()))
 		return
 	}
 

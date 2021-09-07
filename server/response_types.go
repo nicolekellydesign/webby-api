@@ -7,45 +7,25 @@ import (
 	"github.com/nicolekellydesign/webby-api/entities"
 )
 
-// HTTPError represents an error response for an API endpoint.
-type HTTPError struct {
+// httpError represents an error response for an API endpoint.
+type httpError struct {
 	Code    int    `json:"code"`
 	Message string `json:"message"`
 }
 
-// NewError returns a new HttpError.
-func NewError(code int, message string) HTTPError {
-	return HTTPError{
-		Code:    code,
-		Message: message,
+// WriteError sends an error response with the code and error message
+// in the body encoded as JSON.
+func WriteError(w http.ResponseWriter, code int, message string) {
+	err := httpError{
+		code,
+		message,
 	}
-}
 
-// SendErrMalformedBody creates and sends an error for a malformed JSON body.
-func SendErrMalformedBody(w http.ResponseWriter) {
-	httpError := NewError(400, "Bad request: malformed body")
-	httpError.Write(w)
-}
-
-// SendErrWrongMethod creates and sends an error for wrong HTTP method.
-func SendErrWrongMethod(w http.ResponseWriter) {
-	httpError := NewError(400, "Bad request: wrong HTTP method")
-	httpError.Write(w)
-}
-
-// SendErrWrongType creates and sends an error for wrong content type.
-func SendErrWrongType(w http.ResponseWriter) {
-	httpError := NewError(400, "Bad request: wrong content type")
-	httpError.Write(w)
-}
-
-// Write writes the HttpError to the given ResponseWriter.
-func (e HTTPError) Write(w http.ResponseWriter) {
 	w.Header().Add("Content-Type", "application/json")
-	w.WriteHeader(e.Code)
+	w.WriteHeader(err.Code)
 
 	encoder := json.NewEncoder(w)
-	encoder.Encode(e)
+	encoder.Encode(err)
 }
 
 // AuthResponse is sent when a login is checked, and sends

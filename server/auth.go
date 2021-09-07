@@ -14,8 +14,8 @@ var signingKey string
 
 var errInvalidToken = errors.New("invalid token")
 
-// Auth holds authenitcation data for a user.
-type Auth struct {
+// authClaims holds authenitcation data for a user.
+type authClaims struct {
 	jwt.StandardClaims
 	UserID uint `json:"id"`
 }
@@ -23,7 +23,7 @@ type Auth struct {
 // generateToken creates a new authentication token that expires after 24 hours.
 func generateToken(user entities.User) (string, error) {
 	expiresAt := time.Now().Add(24 * time.Hour).Unix()
-	token := jwt.NewWithClaims(jwt.SigningMethodHS512, Auth{
+	token := jwt.NewWithClaims(jwt.SigningMethodHS512, authClaims{
 		StandardClaims: jwt.StandardClaims{
 			Subject:   user.Username,
 			ExpiresAt: expiresAt,
@@ -40,7 +40,7 @@ func validateToken(tokenString string) (uint, string, error) {
 		return 0, "", errInvalidToken
 	}
 
-	var claims Auth
+	var claims authClaims
 	token, err := jwt.ParseWithClaims(tokenString, &claims, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("wrong signing method: %v", token.Header["alg"])
