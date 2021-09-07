@@ -119,7 +119,7 @@ func (l Listener) RemovePhoto(w http.ResponseWriter, r *http.Request) {
 
 	defer r.Body.Close()
 
-	var req AddPhotoRequest
+	var req RemovePhotoRequest
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&req); err != nil {
 		WriteError(w, http.StatusBadRequest, "invalid request data")

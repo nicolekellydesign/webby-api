@@ -92,7 +92,7 @@ func (db DB) GetPhotos() ([]*entities.Photo, error) {
 	return ret, nil
 }
 
-// RemovePhoto delets a photo with the given file name from
+// RemovePhoto deletes a photo with the given file name from
 // the database.
 func (db DB) RemovePhoto(fileName string) error {
 	tx := db.db.MustBegin()
