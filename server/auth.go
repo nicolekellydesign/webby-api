@@ -14,7 +14,7 @@ var signingKey string
 
 var errInvalidToken = errors.New("invalid token")
 
-// authClaims holds authenitcation data for a user.
+// authClaims holds authentication data for a user.
 type authClaims struct {
 	jwt.StandardClaims
 	UserID uint `json:"id"`
