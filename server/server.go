@@ -2,10 +2,16 @@ package server
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 
 	"github.com/nicolekellydesign/webby-api/database"
+)
+
+var (
+	errWrongContentType = errors.New("wrong content type")
+	errWrongMethod      = errors.New("wrong method type")
 )
 
 // Listener handles requests to our API endpoints.
@@ -44,18 +50,25 @@ func (l Listener) Serve() {
 	http.ListenAndServe(addr, nil)
 }
 
+func checkPreconditions(r *http.Request, method string, checkContentType bool) error {
+	if r.Method != method {
+		return errWrongMethod
+	}
+
+	if checkContentType && r.Header.Get("Content-Type") != "application/json" {
+		return errWrongContentType
+	}
+
+	return nil
+}
+
 // AddPhoto handles a request to add a file name to the
 // photos database.
 //
 // It requires a valid auth token.
 func (l Listener) AddPhoto(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		WriteError(w, http.StatusBadRequest, "wrong HTTP method type")
-		return
-	}
-
-	if r.Header.Get("Content-Type") != "application/json" {
-		WriteError(w, http.StatusBadRequest, "wrong content type")
+	if err := checkPreconditions(r, http.MethodPost, true); err != nil {
+		WriteError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -88,8 +101,8 @@ func (l Listener) AddPhoto(w http.ResponseWriter, r *http.Request) {
 
 // GetPhotos handles requests to get all photos from the database.
 func (l Listener) GetPhotos(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		WriteError(w, http.StatusBadRequest, "wrong HTTP method type")
+	if err := checkPreconditions(r, http.MethodGet, false); err != nil {
+		WriteError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -114,13 +127,8 @@ func (l Listener) GetPhotos(w http.ResponseWriter, r *http.Request) {
 //
 // It requires a valid auth token.
 func (l Listener) RemovePhoto(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		WriteError(w, http.StatusBadRequest, "wrong HTTP method type")
-		return
-	}
-
-	if r.Header.Get("Content-Type") != "application/json" {
-		WriteError(w, http.StatusBadRequest, "wrong content type")
+	if err := checkPreconditions(r, http.MethodPost, true); err != nil {
+		WriteError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -155,13 +163,8 @@ func (l Listener) RemovePhoto(w http.ResponseWriter, r *http.Request) {
 //
 // Requires a valid auth token.
 func (l Listener) AddGalleryItem(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		WriteError(w, http.StatusBadRequest, "wrong HTTP method type")
-		return
-	}
-
-	if r.Header.Get("Content-Type") != "application/json" {
-		WriteError(w, http.StatusBadRequest, "wrong content type")
+	if err := checkPreconditions(r, http.MethodPost, true); err != nil {
+		WriteError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -195,8 +198,8 @@ func (l Listener) AddGalleryItem(w http.ResponseWriter, r *http.Request) {
 // GetGalleryItems handles a request to get all gallery items from the
 // database.
 func (l Listener) GetGalleryItems(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		WriteError(w, http.StatusBadRequest, "wrong HTTP method type")
+	if err := checkPreconditions(r, http.MethodGet, false); err != nil {
+		WriteError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -220,13 +223,8 @@ func (l Listener) GetGalleryItems(w http.ResponseWriter, r *http.Request) {
 //
 // Requires a valid auth token.
 func (l Listener) RemoveGalleryItem(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		WriteError(w, http.StatusBadRequest, "wrong HTTP method type")
-		return
-	}
-
-	if r.Header.Get("Content-Type") != "application/json" {
-		WriteError(w, http.StatusBadRequest, "wrong content type")
+	if err := checkPreconditions(r, http.MethodPost, true); err != nil {
+		WriteError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -261,13 +259,8 @@ func (l Listener) RemoveGalleryItem(w http.ResponseWriter, r *http.Request) {
 //
 // Requires a valid auth token.
 func (l Listener) AddSlide(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		WriteError(w, http.StatusBadRequest, "wrong HTTP method type")
-		return
-	}
-
-	if r.Header.Get("Content-Type") != "application/json" {
-		WriteError(w, http.StatusBadRequest, "wrong content type")
+	if err := checkPreconditions(r, http.MethodPost, true); err != nil {
+		WriteError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -302,13 +295,8 @@ func (l Listener) AddSlide(w http.ResponseWriter, r *http.Request) {
 //
 // Requires a valid auth token.
 func (l Listener) RemoveSlide(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		WriteError(w, http.StatusBadRequest, "wrong HTTP method type")
-		return
-	}
-
-	if r.Header.Get("Content-Type") != "application/json" {
-		WriteError(w, http.StatusBadRequest, "wrong content type")
+	if err := checkPreconditions(r, http.MethodPost, true); err != nil {
+		WriteError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -341,13 +329,8 @@ func (l Listener) RemoveSlide(w http.ResponseWriter, r *http.Request) {
 
 // AddUser adds a new user into the database.
 func (l Listener) AddUser(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		WriteError(w, http.StatusBadRequest, "wrong HTTP method type")
-		return
-	}
-
-	if r.Header.Get("Content-Type") != "application/json" {
-		WriteError(w, http.StatusBadRequest, "wrong content type")
+	if err := checkPreconditions(r, http.MethodPost, true); err != nil {
+		WriteError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -400,13 +383,8 @@ func (l Listener) AddUser(w http.ResponseWriter, r *http.Request) {
 // PerformLogin checks if the given credentials match, and if so, generates
 // and responds with an auth token.
 func (l Listener) PerformLogin(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		WriteError(w, http.StatusBadRequest, "wrong HTTP method type")
-		return
-	}
-
-	if r.Header.Get("Content-Type") != "application/json" {
-		WriteError(w, http.StatusBadRequest, "wrong content type")
+	if err := checkPreconditions(r, http.MethodPost, true); err != nil {
+		WriteError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -449,8 +427,8 @@ func (l Listener) PerformLogin(w http.ResponseWriter, r *http.Request) {
 
 // GetUsers gets all of the users from the database.
 func (l Listener) GetUsers(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		WriteError(w, http.StatusBadRequest, "wrong HTTP method type")
+	if err := checkPreconditions(r, http.MethodGet, false); err != nil {
+		WriteError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
