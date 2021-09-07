@@ -5,13 +5,13 @@ go 1.17
 require (
 	github.com/DataDrake/cli-ng/v2 v2.0.2
 	github.com/DataDrake/waterlog v1.2.0
+	github.com/golang-jwt/jwt/v4 v4.0.0
 	github.com/jackc/pgx/v4 v4.13.0
 	github.com/jmoiron/sqlx v1.3.4
 )
 
 require (
 	github.com/DataDrake/flair v0.5.1 // indirect
-	github.com/golang-jwt/jwt/v4 v4.0.0 // indirect
 	github.com/jackc/chunkreader/v2 v2.0.1 // indirect
 	github.com/jackc/pgconn v1.10.0 // indirect
 	github.com/jackc/pgio v1.0.0 // indirect
