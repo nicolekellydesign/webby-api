@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS users (
 
 CREATE TABLE IF NOT EXISTS photos (
 	id SERIAL PRIMARY KEY,
-	filename TEXT NOT NULL
+	file_name TEXT NOT NULL
 );
 `
 
@@ -65,6 +65,46 @@ func (db DB) Close() {
 	} else {
 		db.log.Infoln("closed connection to database")
 	}
+}
+
+// AddPhoto inserts a new photo into the database.
+func (db DB) AddPhoto(fileName string) error {
+	tx := db.db.MustBegin()
+	tx.MustExec("INSERT INTO photos (file_name) VALUES ($1);", fileName)
+
+	if err := tx.Commit(); err != nil {
+		tx.Rollback()
+		db.log.Errorf("error adding photo to database: %s\n", err)
+		return err
+	}
+
+	return nil
+}
+
+// GetPhotos fetches all photos from the database.
+func (db DB) GetPhotos() ([]*entities.Photo, error) {
+	ret := make([]*entities.Photo, 0)
+	if err := db.db.Select(&ret, "SELECT file_name FROM photos;"); err != nil {
+		db.log.Errorf("error getting photos from database: %s\n", err)
+		return nil, err
+	}
+
+	return ret, nil
+}
+
+// RemovePhoto delets a photo with the given file name from
+// the database.
+func (db DB) RemovePhoto(fileName string) error {
+	tx := db.db.MustBegin()
+	tx.MustExec("DELETE FROM photos WHERE file_name=$1;", fileName)
+
+	if err := tx.Commit(); err != nil {
+		tx.Rollback()
+		db.log.Errorf("error removing photo from database: %s\n", err)
+		return err
+	}
+
+	return nil
 }
 
 // AddUser inserts a new user into the database.

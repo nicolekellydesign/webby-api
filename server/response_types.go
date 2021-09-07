@@ -34,6 +34,12 @@ type AuthResponse struct {
 	Token string `json:"token"`
 }
 
+// PhotosResponse is sent when a client requests all of the
+// photos from the database.
+type PhotosResponse struct {
+	Photos []*entities.Photo `json:"photos"`
+}
+
 // UsersResponse is sent when a request to list all useres
 // is received.
 type UsersResponse struct {
