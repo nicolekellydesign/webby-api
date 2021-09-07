@@ -28,6 +28,27 @@ CREATE TABLE IF NOT EXISTS photos (
 	id SERIAL PRIMARY KEY,
 	file_name TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS gallery_items (
+	id TEXT UNIQUE NOT NULL PRIMARY KEY,
+	title_line_1 TEXT NOT NULL,
+	title_line_2 TEXT NOT NULL,
+	thumbnail_location TEXT NOT NULL,
+	thumbnail_caption TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS slides (
+	id SERIAL PRIMARY KEY,
+	gallery_id TEXT NOT NULL,
+	name TEXT UNIQUE NOT NULL,
+	title TEXT NOT NULL,
+	caption TEXT NOT NULL,
+	location TEXT NOT NULL,
+	CONSTRAINT fk_gallery
+		FOREIGN KEY(gallery_id)
+		REFERENCES gallery_items(id)
+		ON DELETE CASCADE
+);
 `
 
 // Connect opens a connection to the database and creates the
@@ -101,6 +122,125 @@ func (db DB) RemovePhoto(fileName string) error {
 	if err := tx.Commit(); err != nil {
 		tx.Rollback()
 		db.log.Errorf("error removing photo from database: %s\n", err)
+		return err
+	}
+
+	return nil
+}
+
+// AddGalleryItem adds a new gallery item to the database.
+func (db DB) AddGalleryItem(item entities.GalleryItem) error {
+	tx := db.db.MustBegin()
+
+	sql := `INSERT INTO gallery_items (
+		id,
+		title_line_1,
+		title_line_2,
+		thumbnail_location,
+		thumbnail_caption
+	) VALUES (:id, :title_line_1, :title_line_2, :thumbnail_location, :thumbnail_caption);`
+
+	tx.NamedExec(sql, item)
+
+	if err := tx.Commit(); err != nil {
+		tx.Rollback()
+		db.log.Errorf("error adding gallery item to database: %s\n", err)
+		return err
+	}
+
+	return nil
+}
+
+// GetGalleryItems returns all gallery items from the database.
+// This makes two requests: one to get the items, and another to
+// get all of the slides for each item.
+func (db DB) GetGalleryItems() ([]*entities.GalleryItem, error) {
+	items := make([]*entities.GalleryItem, 0)
+
+	query := `SELECT
+		id,
+		title_line_1,
+		title_line_2,
+		thumbnail_location,
+		thumbnail_caption
+	FROM gallery_items;`
+
+	if err := db.db.Select(&items, query); err != nil {
+		db.log.Errorf("error getting gallery items from the database: %s\n", err)
+		return nil, err
+	}
+
+	// Get the slides for each gallery item
+	for _, item := range items {
+		slides := make([]*entities.Slide, 0)
+		query := `SELECT
+			gallery_id,
+			title,
+			caption,
+			location
+		FROM slides WHERE gallery_id=$1;`
+
+		if err := db.db.Select(&slides, query, item.Name); err != nil {
+			db.log.Errorf("error getting slide from the database: %s\n", err)
+			continue
+		}
+
+		item.Slides = slides
+	}
+
+	return items, nil
+}
+
+// RemoveGalleryItem delets a gallery item from the database.
+func (db DB) RemoveGalleryItem(name string) error {
+	tx := db.db.MustBegin()
+	tx.MustExec("DELETE FROM gallery_items WHERE id=$1;", name)
+
+	if err := tx.Commit(); err != nil {
+		tx.Rollback()
+		db.log.Errorf("error removing gallery item from database: %s\n", err)
+		return err
+	}
+
+	return nil
+}
+
+// AddSlide inserts a new slide into the database.
+func (db DB) AddSlide(slide entities.Slide) error {
+	tx := db.db.MustBegin()
+
+	sql := `INSERT INTO slides (
+		gallery_id,
+		name,
+		title,
+		caption,
+		location
+	) VALUES (
+		:gallery_id,
+		:name,
+		:title,
+		:caption,
+		:location
+	);`
+
+	tx.NamedExec(sql, slide)
+	if err := tx.Commit(); err != nil {
+		tx.Rollback()
+		db.log.Errorf("error adding slide to database: %s\n", err)
+		return err
+	}
+
+	return nil
+}
+
+// RemoveSlide deletes a slide from the database.
+func (db DB) RemoveSlide(galleryID, name string) error {
+	tx := db.db.MustBegin()
+	tx.MustExec("DELETE FROM slides WHERE gallery_id=$1 AND name=$2;", galleryID, name)
+
+	if err := tx.Commit(); err != nil {
+		tx.Rollback()
+		db.log.Errorf("error removing a slide from database: %s\n", err)
 		return err
 	}
 

@@ -29,6 +29,13 @@ func (l Listener) Serve() {
 	http.HandleFunc("/api/photos/get", l.GetPhotos)      // GET
 	http.HandleFunc("/api/photos/remove", l.RemovePhoto) // POST
 
+	http.HandleFunc("/api/gallery/add", l.AddGalleryItem)       // POST
+	http.HandleFunc("/api/gallery/get", l.GetGalleryItems)      // GET
+	http.HandleFunc("/api/gallery/remove", l.RemoveGalleryItem) // POST
+
+	http.HandleFunc("/api/gallery/slides/add", l.AddSlide)       // POST
+	http.HandleFunc("/api/gallery/slides/remove", l.RemoveSlide) // POST
+
 	http.HandleFunc("/api/login", l.PerformLogin) // POST
 	http.HandleFunc("/api/users/add", l.AddUser)  // POST
 	http.HandleFunc("/api/users/get", l.GetUsers) // GET
@@ -137,6 +144,194 @@ func (l Listener) RemovePhoto(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := l.db.RemovePhoto(req.Filename); err != nil {
+		WriteError(w, http.StatusInternalServerError, fmt.Sprintf("Internal error: %s", err.Error()))
+		return
+	}
+
+	w.WriteHeader(200)
+}
+
+// AddGalleryItem handles a request to add a new gallery item.
+//
+// Requires a valid auth token.
+func (l Listener) AddGalleryItem(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		WriteError(w, http.StatusBadRequest, "wrong HTTP method type")
+		return
+	}
+
+	if r.Header.Get("Content-Type") != "application/json" {
+		WriteError(w, http.StatusBadRequest, "wrong content type")
+		return
+	}
+
+	defer r.Body.Close()
+
+	var req AddGalleryItemRequest
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&req); err != nil {
+		WriteError(w, http.StatusBadRequest, "invalid request data")
+		return
+	}
+
+	if _, _, err := validateToken(req.Token); err != nil {
+		if err == errInvalidToken {
+			WriteError(w, http.StatusUnauthorized, err.Error())
+			return
+		}
+
+		WriteError(w, http.StatusInternalServerError, fmt.Sprintf("Internal error: %s", err.Error()))
+		return
+	}
+
+	if err := l.db.AddGalleryItem(req.Item); err != nil {
+		WriteError(w, http.StatusInternalServerError, fmt.Sprintf("Internal error: %s", err.Error()))
+		return
+	}
+
+	w.WriteHeader(200)
+}
+
+// GetGalleryItems handles a request to get all gallery items from the
+// database.
+func (l Listener) GetGalleryItems(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		WriteError(w, http.StatusBadRequest, "wrong HTTP method type")
+		return
+	}
+
+	ret, err := l.db.GetGalleryItems()
+	if err != nil {
+		WriteError(w, http.StatusInternalServerError, fmt.Sprintf("Internal error: %s", err.Error()))
+		return
+	}
+
+	// Send back the response
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	encoder := json.NewEncoder(w)
+	encoder.Encode(GalleryResponse{
+		ret,
+	})
+}
+
+// RemoveGalleryItem handles a request to remove a gallery item.
+//
+// Requires a valid auth token.
+func (l Listener) RemoveGalleryItem(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		WriteError(w, http.StatusBadRequest, "wrong HTTP method type")
+		return
+	}
+
+	if r.Header.Get("Content-Type") != "application/json" {
+		WriteError(w, http.StatusBadRequest, "wrong content type")
+		return
+	}
+
+	defer r.Body.Close()
+
+	var req RemoveGalleryItemRequest
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&req); err != nil {
+		WriteError(w, http.StatusBadRequest, "invalid request data")
+		return
+	}
+
+	if _, _, err := validateToken(req.Token); err != nil {
+		if err == errInvalidToken {
+			WriteError(w, http.StatusUnauthorized, err.Error())
+			return
+		}
+
+		WriteError(w, http.StatusInternalServerError, fmt.Sprintf("Internal error: %s", err.Error()))
+		return
+	}
+
+	if err := l.db.RemoveGalleryItem(req.ID); err != nil {
+		WriteError(w, http.StatusInternalServerError, fmt.Sprintf("Internal error: %s", err.Error()))
+		return
+	}
+
+	w.WriteHeader(200)
+}
+
+// AddSlide handles a request to add a new gallery slide.
+//
+// Requires a valid auth token.
+func (l Listener) AddSlide(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		WriteError(w, http.StatusBadRequest, "wrong HTTP method type")
+		return
+	}
+
+	if r.Header.Get("Content-Type") != "application/json" {
+		WriteError(w, http.StatusBadRequest, "wrong content type")
+		return
+	}
+
+	defer r.Body.Close()
+
+	var req AddSlideRequest
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&req); err != nil {
+		WriteError(w, http.StatusBadRequest, "invalid request data")
+		return
+	}
+
+	if _, _, err := validateToken(req.Token); err != nil {
+		if err == errInvalidToken {
+			WriteError(w, http.StatusUnauthorized, err.Error())
+			return
+		}
+
+		WriteError(w, http.StatusInternalServerError, fmt.Sprintf("Internal error: %s", err.Error()))
+		return
+	}
+
+	if err := l.db.AddSlide(req.Slide); err != nil {
+		WriteError(w, http.StatusInternalServerError, fmt.Sprintf("Internal error: %s", err.Error()))
+		return
+	}
+
+	w.WriteHeader(200)
+}
+
+// RemoveSlide handles a request to remove a gallery slide.
+//
+// Requires a valid auth token.
+func (l Listener) RemoveSlide(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		WriteError(w, http.StatusBadRequest, "wrong HTTP method type")
+		return
+	}
+
+	if r.Header.Get("Content-Type") != "application/json" {
+		WriteError(w, http.StatusBadRequest, "wrong content type")
+		return
+	}
+
+	defer r.Body.Close()
+
+	var req RemoveSlideRequest
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&req); err != nil {
+		WriteError(w, http.StatusBadRequest, "invalid request data")
+		return
+	}
+
+	if _, _, err := validateToken(req.Token); err != nil {
+		if err == errInvalidToken {
+			WriteError(w, http.StatusUnauthorized, err.Error())
+			return
+		}
+
+		WriteError(w, http.StatusInternalServerError, fmt.Sprintf("Internal error: %s", err.Error()))
+		return
+	}
+
+	if err := l.db.RemoveSlide(req.GalleryID, req.Name); err != nil {
 		WriteError(w, http.StatusInternalServerError, fmt.Sprintf("Internal error: %s", err.Error()))
 		return
 	}
