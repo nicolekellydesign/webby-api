@@ -73,6 +73,14 @@ func (l Listener) AddUser(w http.ResponseWriter, r *http.Request) {
 			WriteError(w, http.StatusInternalServerError, fmt.Sprintf("Internal error: %s", err.Error()))
 			return
 		}
+
+		// Make sure usernames are unique
+		for _, user := range users {
+			if user.Username == req.Username {
+				WriteError(w, http.StatusBadRequest, "username already exists")
+				return
+			}
+		}
 	}
 
 	if err := l.db.AddUser(req.Username, req.Password); err != nil {

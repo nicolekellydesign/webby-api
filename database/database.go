@@ -20,7 +20,7 @@ type DB struct {
 var schema = `
 CREATE TABLE IF NOT EXISTS users (
 	id SERIAL PRIMARY KEY,
-	user_name TEXT NOT NULL,
+	user_name TEXT UNIQUE NOT NULL,
 	pwdhash TEXT NOT NULL
 );
 
