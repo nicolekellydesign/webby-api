@@ -6,7 +6,6 @@ import (
 	"net/http"
 
 	"github.com/nicolekellydesign/webby-api/database"
-	"github.com/nicolekellydesign/webby-api/entities"
 )
 
 // Listener handles requests to our API endpoints.
@@ -26,9 +25,9 @@ func New(port int, db *database.DB) *Listener {
 
 // Serve sets up our endpoint handlers and begins listening.
 func (l Listener) Serve() {
-	http.HandleFunc("/api/adduser", l.AddUser)  // POST
-	http.HandleFunc("/api/login", l.CheckLogin) // POST
-	http.HandleFunc("/api/users", l.GetUsers)   // GET
+	http.HandleFunc("/api/adduser", l.AddUser)    // POST
+	http.HandleFunc("/api/login", l.PerformLogin) // POST
+	http.HandleFunc("/api/users", l.GetUsers)     // GET
 
 	addr := fmt.Sprintf("localhost:%d", l.Port)
 	http.ListenAndServe(addr, nil)
@@ -61,7 +60,10 @@ func (l Listener) AddUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if len(users) >= 0 {
+	// If no users have been added yet, then it would be impossible to
+	// get a token in order to add one. So, only check for a valid token
+	// if there are any users in the database.
+	if len(users) > 0 {
 		if _, _, err := validateToken(req.Token); err != nil {
 			if err == errInvalidToken {
 				WriteError(w, http.StatusUnauthorized, err.Error())
@@ -73,7 +75,7 @@ func (l Listener) AddUser(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if err := l.db.AddUser(&req.User); err != nil {
+	if err := l.db.AddUser(req.Username, req.Password); err != nil {
 		WriteError(w, http.StatusInternalServerError, fmt.Sprintf("Internal error: %s", err.Error()))
 		return
 	}
@@ -81,9 +83,9 @@ func (l Listener) AddUser(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(200)
 }
 
-// CheckLogin looks to see if a login from the API should
-// be successful or not.
-func (l Listener) CheckLogin(w http.ResponseWriter, r *http.Request) {
+// PerformLogin checks if the given credentials match, and if so, generates
+// and responds with an auth token.
+func (l Listener) PerformLogin(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		WriteError(w, http.StatusBadRequest, "wrong HTTP method type")
 		return
@@ -97,22 +99,22 @@ func (l Listener) CheckLogin(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	// Decode the user that was sent
-	var user entities.User
+	var req LoginRequest
 	decoder := json.NewDecoder(r.Body)
-	if err := decoder.Decode(&user); err != nil {
+	if err := decoder.Decode(&req); err != nil {
 		WriteError(w, http.StatusBadRequest, "invalid request data")
 		return
 	}
 
 	// Check if the login should be a success
-	valid, err := l.db.CheckLogin(&user)
+	user, err := l.db.GetLogin(req.Username, req.Password)
 	if err != nil {
 		WriteError(w, http.StatusInternalServerError, fmt.Sprintf("Internal error: %s", err.Error()))
 		return
 	}
 
 	// Send back the response
-	if valid {
+	if user != nil {
 		token, err := generateToken(user)
 		if err != nil {
 			WriteError(w, http.StatusInternalServerError, fmt.Sprintf("Internal error: %s", err.Error()))
@@ -127,7 +129,7 @@ func (l Listener) CheckLogin(w http.ResponseWriter, r *http.Request) {
 			token,
 		})
 	} else {
-		WriteError(w, http.StatusInternalServerError, fmt.Sprintf("Internal error: %s", err.Error()))
+		WriteError(w, http.StatusUnauthorized, "incorrect login credentials")
 	}
 }
 

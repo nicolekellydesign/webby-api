@@ -67,10 +67,10 @@ func (db DB) Close() {
 	}
 }
 
-// AddUser inserts a new user with password into the database.
-func (db DB) AddUser(user *entities.User) error {
+// AddUser inserts a new user into the database.
+func (db DB) AddUser(username, password string) error {
 	tx := db.db.MustBegin()
-	tx.NamedExec("INSERT INTO users (user_name, pwdhash) VALUES (:user_name, crypt(:pwdhash, gen_salt('bf')));", user)
+	tx.MustExec("INSERT INTO users (user_name, pwdhash) VALUES ($1, crypt($2, gen_salt('bf')));", username, password)
 
 	if err := tx.Commit(); err != nil {
 		tx.Rollback()
@@ -81,19 +81,20 @@ func (db DB) AddUser(user *entities.User) error {
 	return nil
 }
 
-// CheckLogin tests if the sent user is a valid user in the database.
-func (db DB) CheckLogin(user *entities.User) (bool, error) {
-	valid := false
-	err := db.db.Get(&valid, "SELECT (pwdhash = crypt($1, pwdhash)) AS pwdhash FROM users WHERE user_name=$2;", user.Password, user.Username)
+// GetLogin looks for a matching user for the given username and password. If
+// a match is found, a User struct is returned with the id and username.
+func (db DB) GetLogin(username, password string) (*entities.User, error) {
+	var user entities.User
+	err := db.db.Get(&user, "SELECT id, user_name FROM users WHERE user_name=$1 AND (pwdhash = crypt($2, pwdhash));", user.Username, user.Password)
 	if err != nil && err != sql.ErrNoRows {
 		db.log.Errorf("error checking user login: %s\n", err)
-		return false, err
+		return nil, err
 	}
 
-	return valid, nil
+	return &user, nil
 }
 
-// GetUsers gets all of the users from the database.
+// GetUsers fetches all of the users from the database.
 func (db DB) GetUsers() ([]*entities.User, error) {
 	ret := make([]*entities.User, 0)
 	if err := db.db.Select(&ret, "SELECT id, user_name FROM users;"); err != nil {

@@ -21,7 +21,7 @@ type authClaims struct {
 }
 
 // generateToken creates a new authentication token that expires after 24 hours.
-func generateToken(user entities.User) (string, error) {
+func generateToken(user *entities.User) (string, error) {
 	expiresAt := time.Now().Add(24 * time.Hour).Unix()
 	token := jwt.NewWithClaims(jwt.SigningMethodHS512, authClaims{
 		StandardClaims: jwt.StandardClaims{
