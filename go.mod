@@ -5,7 +5,7 @@ go 1.17
 require (
 	github.com/DataDrake/cli-ng/v2 v2.0.2
 	github.com/DataDrake/waterlog v1.2.0
-	github.com/golang-jwt/jwt/v4 v4.0.0
+	github.com/gofrs/uuid v4.0.0+incompatible
 	github.com/jackc/pgx/v4 v4.13.0
 	github.com/jmoiron/sqlx v1.3.4
 )

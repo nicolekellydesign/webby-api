@@ -5,8 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/nicolekellydesign/webby-api/database"
+	"github.com/nicolekellydesign/webby-api/entities"
 )
 
 var (
@@ -62,11 +64,74 @@ func checkPreconditions(r *http.Request, method string, checkContentType bool) e
 	return nil
 }
 
+// checkSession tries to get our session cookie and checks if it is
+// valid, meaning it exists in the database and the expiration time
+// has not yet passed.
+func (l Listener) checkSession(r *http.Request) (ok bool, code int, err error) {
+	ok = false
+
+	// Get our session cookie if we have one
+	cookie, err := r.Cookie("session_token")
+	if err != nil {
+		if err == http.ErrNoCookie {
+			code = http.StatusUnauthorized
+			return
+		}
+
+		code = http.StatusBadRequest
+		return
+	}
+
+	// Get our stored session
+	token := cookie.Value
+	session, err := l.db.GetSession(token)
+	if err != nil {
+		code = http.StatusInternalServerError
+		return
+	}
+
+	// Check if we have a session
+	if session == nil {
+		code = http.StatusUnauthorized
+		return
+	}
+
+	// Check if the session has expired.
+	// If it has expired, remove it from the database.
+	if time.Now().After(session.Expires) {
+		if err = l.db.RemoveSession(token); err != nil {
+			code = http.StatusInternalServerError
+			return
+		}
+
+		code = http.StatusUnauthorized
+		return
+	}
+
+	// Everything passed, so we have a valid session
+	ok = true
+	code = http.StatusOK
+	return
+}
+
 // AddPhoto handles a request to add a file name to the
 // photos database.
 //
 // It requires a valid auth token.
 func (l Listener) AddPhoto(w http.ResponseWriter, r *http.Request) {
+	ok, code, err := l.checkSession(r)
+	if !ok {
+		if err != nil {
+			WriteError(w, code, err.Error())
+			return
+		}
+
+		// Session was not okay, but no error
+		// That means the session is not valid
+		w.WriteHeader(code)
+		return
+	}
+
 	if err := checkPreconditions(r, http.MethodPost, true); err != nil {
 		WriteError(w, http.StatusBadRequest, err.Error())
 		return
@@ -78,16 +143,6 @@ func (l Listener) AddPhoto(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&req); err != nil {
 		WriteError(w, http.StatusBadRequest, "invalid request data")
-		return
-	}
-
-	if _, _, err := validateToken(req.Token); err != nil {
-		if err == errInvalidToken {
-			WriteError(w, http.StatusUnauthorized, err.Error())
-			return
-		}
-
-		WriteError(w, http.StatusInternalServerError, fmt.Sprintf("Internal error: %s", err.Error()))
 		return
 	}
 
@@ -127,6 +182,19 @@ func (l Listener) GetPhotos(w http.ResponseWriter, r *http.Request) {
 //
 // It requires a valid auth token.
 func (l Listener) RemovePhoto(w http.ResponseWriter, r *http.Request) {
+	ok, code, err := l.checkSession(r)
+	if !ok {
+		if err != nil {
+			WriteError(w, code, err.Error())
+			return
+		}
+
+		// Session was not okay, but no error
+		// That means the session is not valid
+		w.WriteHeader(code)
+		return
+	}
+
 	if err := checkPreconditions(r, http.MethodPost, true); err != nil {
 		WriteError(w, http.StatusBadRequest, err.Error())
 		return
@@ -138,16 +206,6 @@ func (l Listener) RemovePhoto(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&req); err != nil {
 		WriteError(w, http.StatusBadRequest, "invalid request data")
-		return
-	}
-
-	if _, _, err := validateToken(req.Token); err != nil {
-		if err == errInvalidToken {
-			WriteError(w, http.StatusUnauthorized, err.Error())
-			return
-		}
-
-		WriteError(w, http.StatusInternalServerError, fmt.Sprintf("Internal error: %s", err.Error()))
 		return
 	}
 
@@ -163,6 +221,19 @@ func (l Listener) RemovePhoto(w http.ResponseWriter, r *http.Request) {
 //
 // Requires a valid auth token.
 func (l Listener) AddGalleryItem(w http.ResponseWriter, r *http.Request) {
+	ok, code, err := l.checkSession(r)
+	if !ok {
+		if err != nil {
+			WriteError(w, code, err.Error())
+			return
+		}
+
+		// Session was not okay, but no error
+		// That means the session is not valid
+		w.WriteHeader(code)
+		return
+	}
+
 	if err := checkPreconditions(r, http.MethodPost, true); err != nil {
 		WriteError(w, http.StatusBadRequest, err.Error())
 		return
@@ -174,16 +245,6 @@ func (l Listener) AddGalleryItem(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&req); err != nil {
 		WriteError(w, http.StatusBadRequest, "invalid request data")
-		return
-	}
-
-	if _, _, err := validateToken(req.Token); err != nil {
-		if err == errInvalidToken {
-			WriteError(w, http.StatusUnauthorized, err.Error())
-			return
-		}
-
-		WriteError(w, http.StatusInternalServerError, fmt.Sprintf("Internal error: %s", err.Error()))
 		return
 	}
 
@@ -223,6 +284,19 @@ func (l Listener) GetGalleryItems(w http.ResponseWriter, r *http.Request) {
 //
 // Requires a valid auth token.
 func (l Listener) RemoveGalleryItem(w http.ResponseWriter, r *http.Request) {
+	ok, code, err := l.checkSession(r)
+	if !ok {
+		if err != nil {
+			WriteError(w, code, err.Error())
+			return
+		}
+
+		// Session was not okay, but no error
+		// That means the session is not valid
+		w.WriteHeader(code)
+		return
+	}
+
 	if err := checkPreconditions(r, http.MethodPost, true); err != nil {
 		WriteError(w, http.StatusBadRequest, err.Error())
 		return
@@ -234,16 +308,6 @@ func (l Listener) RemoveGalleryItem(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&req); err != nil {
 		WriteError(w, http.StatusBadRequest, "invalid request data")
-		return
-	}
-
-	if _, _, err := validateToken(req.Token); err != nil {
-		if err == errInvalidToken {
-			WriteError(w, http.StatusUnauthorized, err.Error())
-			return
-		}
-
-		WriteError(w, http.StatusInternalServerError, fmt.Sprintf("Internal error: %s", err.Error()))
 		return
 	}
 
@@ -259,6 +323,19 @@ func (l Listener) RemoveGalleryItem(w http.ResponseWriter, r *http.Request) {
 //
 // Requires a valid auth token.
 func (l Listener) AddSlide(w http.ResponseWriter, r *http.Request) {
+	ok, code, err := l.checkSession(r)
+	if !ok {
+		if err != nil {
+			WriteError(w, code, err.Error())
+			return
+		}
+
+		// Session was not okay, but no error
+		// That means the session is not valid
+		w.WriteHeader(code)
+		return
+	}
+
 	if err := checkPreconditions(r, http.MethodPost, true); err != nil {
 		WriteError(w, http.StatusBadRequest, err.Error())
 		return
@@ -270,16 +347,6 @@ func (l Listener) AddSlide(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&req); err != nil {
 		WriteError(w, http.StatusBadRequest, "invalid request data")
-		return
-	}
-
-	if _, _, err := validateToken(req.Token); err != nil {
-		if err == errInvalidToken {
-			WriteError(w, http.StatusUnauthorized, err.Error())
-			return
-		}
-
-		WriteError(w, http.StatusInternalServerError, fmt.Sprintf("Internal error: %s", err.Error()))
 		return
 	}
 
@@ -295,6 +362,19 @@ func (l Listener) AddSlide(w http.ResponseWriter, r *http.Request) {
 //
 // Requires a valid auth token.
 func (l Listener) RemoveSlide(w http.ResponseWriter, r *http.Request) {
+	ok, code, err := l.checkSession(r)
+	if !ok {
+		if err != nil {
+			WriteError(w, code, err.Error())
+			return
+		}
+
+		// Session was not okay, but no error
+		// That means the session is not valid
+		w.WriteHeader(code)
+		return
+	}
+
 	if err := checkPreconditions(r, http.MethodPost, true); err != nil {
 		WriteError(w, http.StatusBadRequest, err.Error())
 		return
@@ -306,16 +386,6 @@ func (l Listener) RemoveSlide(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&req); err != nil {
 		WriteError(w, http.StatusBadRequest, "invalid request data")
-		return
-	}
-
-	if _, _, err := validateToken(req.Token); err != nil {
-		if err == errInvalidToken {
-			WriteError(w, http.StatusUnauthorized, err.Error())
-			return
-		}
-
-		WriteError(w, http.StatusInternalServerError, fmt.Sprintf("Internal error: %s", err.Error()))
 		return
 	}
 
@@ -353,13 +423,16 @@ func (l Listener) AddUser(w http.ResponseWriter, r *http.Request) {
 	// get a token in order to add one. So, only check for a valid token
 	// if there are any users in the database.
 	if len(users) > 0 {
-		if _, _, err := validateToken(req.Token); err != nil {
-			if err == errInvalidToken {
-				WriteError(w, http.StatusUnauthorized, err.Error())
+		ok, code, err := l.checkSession(r)
+		if !ok {
+			if err != nil {
+				WriteError(w, code, err.Error())
 				return
 			}
 
-			WriteError(w, http.StatusInternalServerError, fmt.Sprintf("Internal error: %s", err.Error()))
+			// Session was not okay, but no error
+			// That means the session is not valid
+			w.WriteHeader(code)
 			return
 		}
 
@@ -407,18 +480,21 @@ func (l Listener) PerformLogin(w http.ResponseWriter, r *http.Request) {
 
 	// Send back the response
 	if user != nil {
-		token, err := generateToken(user)
+		session, err := entities.NewSession(user.Username)
 		if err != nil {
 			WriteError(w, http.StatusInternalServerError, fmt.Sprintf("Internal error: %s", err.Error()))
 			return
 		}
 
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(200)
+		if err = l.db.AddSession(session); err != nil {
+			WriteError(w, http.StatusInternalServerError, fmt.Sprintf("Internal error: %s", err.Error()))
+			return
+		}
 
-		encoder := json.NewEncoder(w)
-		encoder.Encode(AuthResponse{
-			token,
+		http.SetCookie(w, &http.Cookie{
+			Name:    "session_token",
+			Value:   session.Token,
+			Expires: session.Expires,
 		})
 	} else {
 		WriteError(w, http.StatusUnauthorized, "incorrect login credentials")

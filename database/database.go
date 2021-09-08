@@ -49,6 +49,16 @@ CREATE TABLE IF NOT EXISTS slides (
 		REFERENCES gallery_items(id)
 		ON DELETE CASCADE
 );
+
+CREATE TABLE IF NOT EXISTS sessions (
+	token TEXT UNIQUE NOT NULL PRIMARY KEY,
+	user_name TEXT UNIQUE NOT NULL,
+	expires TIMESTAMP NOT NULL,
+	CONSTRAINT fk_user_name
+		FOREIGN KEY(user_name)
+		REFERENCES users(user_name)
+		ON DELETE CASCADE
+);
 `
 
 // Connect opens a connection to the database and creates the
@@ -283,4 +293,53 @@ func (db DB) GetUsers() ([]*entities.User, error) {
 	}
 
 	return ret, nil
+}
+
+// AddSession saves a login session in the database.
+func (db DB) AddSession(session *entities.Session) error {
+	tx := db.db.MustBegin()
+	tx.NamedExec("INSERT INTO sessions (token, user_name, expires) VALUES (:token, :user_name, :expires);", session)
+
+	if err := tx.Commit(); err != nil {
+		tx.Rollback()
+		db.log.Errorf("error saving session in database: %s\n", err)
+		return err
+	}
+
+	return nil
+}
+
+// GetSession fetches a session from the database.
+func (db DB) GetSession(token string) (*entities.Session, error) {
+	var session entities.Session
+
+	sql := `SELECT 
+		token,
+		user_name,
+		expires
+	FROM
+		sessions
+	WHERE
+		token = $1;`
+
+	if err := db.db.Select(&session, sql, token); err != nil {
+		db.log.Errorf("error getting session from database: %s\n", err)
+		return nil, err
+	}
+
+	return &session, nil
+}
+
+// RemoveSession deletes a session from the database.
+func (db DB) RemoveSession(token string) error {
+	tx := db.db.MustBegin()
+	tx.MustExec("DELETE FROM sessions WHERE token=$1;", token)
+
+	if err := tx.Commit(); err != nil {
+		tx.Rollback()
+		db.log.Errorf("error removing a session from database: %s\n", err)
+		return err
+	}
+
+	return nil
 }
