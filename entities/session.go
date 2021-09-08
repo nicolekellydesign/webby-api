@@ -15,7 +15,7 @@ type Session struct {
 
 // NewSession creates a new login session with a unique
 // token generated as a UUID, and an expiry time of
-// two minutes.
+// five minutes.
 func NewSession(username string) (*Session, error) {
 	token, err := uuid.NewV4()
 	if err != nil {
@@ -25,6 +25,6 @@ func NewSession(username string) (*Session, error) {
 	return &Session{
 		Token:    token.String(),
 		Username: username,
-		Expires:  time.Now().Add(120 * time.Second),
+		Expires:  time.Now().Add(300 * time.Second).UTC(), // 5 minutes
 	}, nil
 }

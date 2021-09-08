@@ -44,7 +44,9 @@ func (l Listener) Serve() {
 	http.HandleFunc("/api/gallery/slides/add", l.AddSlide)       // POST
 	http.HandleFunc("/api/gallery/slides/remove", l.RemoveSlide) // POST
 
-	http.HandleFunc("/api/login", l.PerformLogin) // POST
+	http.HandleFunc("/api/login", l.PerformLogin)     // POST
+	http.HandleFunc("/api/refresh", l.RefreshSession) // POST
+
 	http.HandleFunc("/api/users/add", l.AddUser)  // POST
 	http.HandleFunc("/api/users/get", l.GetUsers) // GET
 
@@ -479,9 +481,15 @@ func (l Listener) PerformLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Send back the response
-	if user != nil {
+	if user != nil && (*user != entities.User{}) {
 		session, err := entities.NewSession(user.Username)
 		if err != nil {
+			WriteError(w, http.StatusInternalServerError, fmt.Sprintf("Internal error: %s", err.Error()))
+			return
+		}
+
+		// Remove any existing session for this user from the database
+		if err := l.db.RemoveSessionForName(user.Username); err != nil {
 			WriteError(w, http.StatusInternalServerError, fmt.Sprintf("Internal error: %s", err.Error()))
 			return
 		}
@@ -499,6 +507,60 @@ func (l Listener) PerformLogin(w http.ResponseWriter, r *http.Request) {
 	} else {
 		WriteError(w, http.StatusUnauthorized, "incorrect login credentials")
 	}
+}
+
+// RefreshSession handles requests to refresh a session token.
+func (l Listener) RefreshSession(w http.ResponseWriter, r *http.Request) {
+	if err := checkPreconditions(r, http.MethodPost, false); err != nil {
+		WriteError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// Get our session cookie if we have one
+	cookie, err := r.Cookie("session_token")
+	if err != nil {
+		if err == http.ErrNoCookie {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+
+		WriteError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// Get our stored session
+	token := cookie.Value
+	session, err := l.db.GetSession(token)
+	if err != nil {
+		WriteError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// Check if we have a session
+	if session == nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	// Check if the existing session has expired
+	if session.Expires.Before(time.Now()) {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	// Update the session to be valid for another 5 mins
+	session.Expires = time.Now().Add(300 * time.Second).UTC()
+	if err = l.db.UpdateSession(session); err != nil {
+		WriteError(w, http.StatusInternalServerError, fmt.Sprintf("Internal error: %s", err.Error()))
+		return
+	}
+
+	// Re-set the session cookie
+	http.SetCookie(w, &http.Cookie{
+		Name:    "session_token",
+		Value:   session.Token,
+		Expires: session.Expires,
+	})
 }
 
 // GetUsers gets all of the users from the database.

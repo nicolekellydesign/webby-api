@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/DataDrake/waterlog"
+
 	// This is commented because I guess that's all sqlx needs
 	_ "github.com/jackc/pgx/v4/stdlib"
 	"github.com/jmoiron/sqlx"
@@ -53,7 +54,7 @@ CREATE TABLE IF NOT EXISTS slides (
 CREATE TABLE IF NOT EXISTS sessions (
 	token TEXT UNIQUE NOT NULL PRIMARY KEY,
 	user_name TEXT UNIQUE NOT NULL,
-	expires TIMESTAMP NOT NULL,
+	expires TIMESTAMPTZ NOT NULL,
 	CONSTRAINT fk_user_name
 		FOREIGN KEY(user_name)
 		REFERENCES users(user_name)
@@ -64,7 +65,7 @@ CREATE TABLE IF NOT EXISTS sessions (
 // Connect opens a connection to the database and creates the
 // table structure.
 func Connect(username, password, database string, log *waterlog.WaterLog) (*DB, error) {
-	source := fmt.Sprintf("host=localhost user=%s password=%s dbname=%s sslmode=disable", username, password, database)
+	source := fmt.Sprintf("host=localhost user=%s password=%s dbname=%s sslmode=disable timezone=UTC", username, password, database)
 	db, err := sqlx.Connect("pgx", source)
 	if err != nil {
 		log.Errorf("error connecting to Postgres database: %s\n", err)
@@ -275,7 +276,7 @@ func (db DB) AddUser(username, password string) error {
 // a match is found, a User struct is returned with the id and username.
 func (db DB) GetLogin(username, password string) (*entities.User, error) {
 	var user entities.User
-	err := db.db.Get(&user, "SELECT id, user_name FROM users WHERE user_name=$1 AND (pwdhash = crypt($2, pwdhash));", user.Username, user.Password)
+	err := db.db.Get(&user, "SELECT id, user_name FROM users WHERE user_name=$1 AND (pwdhash = crypt($2, pwdhash));", username, password)
 	if err != nil && err != sql.ErrNoRows {
 		db.log.Errorf("error checking user login: %s\n", err)
 		return nil, err
@@ -298,7 +299,7 @@ func (db DB) GetUsers() ([]*entities.User, error) {
 // AddSession saves a login session in the database.
 func (db DB) AddSession(session *entities.Session) error {
 	tx := db.db.MustBegin()
-	tx.NamedExec("INSERT INTO sessions (token, user_name, expires) VALUES (:token, :user_name, :expires);", session)
+	tx.MustExec("INSERT INTO sessions VALUES ($1, $2, $3);", session.Token, session.Username, session.Expires)
 
 	if err := tx.Commit(); err != nil {
 		tx.Rollback()
@@ -322,7 +323,7 @@ func (db DB) GetSession(token string) (*entities.Session, error) {
 	WHERE
 		token = $1;`
 
-	if err := db.db.Select(&session, sql, token); err != nil {
+	if err := db.db.Get(&session, sql, token); err != nil {
 		db.log.Errorf("error getting session from database: %s\n", err)
 		return nil, err
 	}
@@ -330,7 +331,7 @@ func (db DB) GetSession(token string) (*entities.Session, error) {
 	return &session, nil
 }
 
-// RemoveSession deletes a session from the database.
+// RemoveSession deletes a session from the database by the session token.
 func (db DB) RemoveSession(token string) error {
 	tx := db.db.MustBegin()
 	tx.MustExec("DELETE FROM sessions WHERE token=$1;", token)
@@ -338,6 +339,42 @@ func (db DB) RemoveSession(token string) error {
 	if err := tx.Commit(); err != nil {
 		tx.Rollback()
 		db.log.Errorf("error removing a session from database: %s\n", err)
+		return err
+	}
+
+	return nil
+}
+
+// RemoveSessionForName deletes a session from the database that is
+// tied to a particular username.
+func (db DB) RemoveSessionForName(username string) error {
+	tx := db.db.MustBegin()
+	tx.MustExec("DELETE FROM sessions WHERE user_name=$1;", username)
+
+	if err := tx.Commit(); err != nil {
+		tx.Rollback()
+		db.log.Errorf("error removing a session from database: %s\n", err)
+		return err
+	}
+
+	return nil
+}
+
+// UpdateSession sets a new expiration time for an existing session.
+func (db DB) UpdateSession(session *entities.Session) error {
+	tx := db.db.MustBegin()
+
+	sql := `UPDATE sessions
+			SET
+				expires = :expires
+			WHERE
+				token = :token;`
+
+	tx.NamedExec(sql, session)
+
+	if err := tx.Commit(); err != nil {
+		tx.Rollback()
+		db.log.Errorf("error updating a session in the database: %s\n", err)
 		return err
 	}
 
