@@ -482,7 +482,7 @@ func (l Listener) PerformLogin(w http.ResponseWriter, r *http.Request) {
 
 	// Send back the response
 	if user != nil && (*user != entities.User{}) {
-		session, err := entities.NewSession(user.Username)
+		session, err := entities.NewSession(user.Username, req.Extended)
 		if err != nil {
 			WriteError(w, http.StatusInternalServerError, fmt.Sprintf("Internal error: %s", err.Error()))
 			return
@@ -500,9 +500,10 @@ func (l Listener) PerformLogin(w http.ResponseWriter, r *http.Request) {
 		}
 
 		http.SetCookie(w, &http.Cookie{
-			Name:    "session_token",
-			Value:   session.Token,
-			Expires: session.Expires,
+			Name:     "session_token",
+			Value:    session.Token,
+			Expires:  session.Expires,
+			HttpOnly: true,
 		})
 	} else {
 		WriteError(w, http.StatusUnauthorized, "incorrect login credentials")

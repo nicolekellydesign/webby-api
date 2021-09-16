@@ -49,4 +49,5 @@ type AddUserRequest struct {
 type LoginRequest struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
+	Extended bool   `json:"extended,omitempty"`
 }
