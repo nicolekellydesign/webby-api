@@ -45,6 +45,7 @@ func (l Listener) Serve() {
 	http.HandleFunc("/api/gallery/slides/remove", l.RemoveSlide) // POST
 
 	http.HandleFunc("/api/login", l.PerformLogin)     // POST
+	http.HandleFunc("/api/logout", l.PerformLogout)   // POST
 	http.HandleFunc("/api/refresh", l.RefreshSession) // POST
 
 	http.HandleFunc("/api/users/add", l.AddUser)  // POST
@@ -508,6 +509,56 @@ func (l Listener) PerformLogin(w http.ResponseWriter, r *http.Request) {
 	} else {
 		WriteError(w, http.StatusUnauthorized, "incorrect login credentials")
 	}
+}
+
+func (l Listener) PerformLogout(w http.ResponseWriter, r *http.Request) {
+	if err := checkPreconditions(r, http.MethodPost, false); err != nil {
+		WriteError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// Get our session cookie if we have one
+	cookie, err := r.Cookie("session_token")
+	if err != nil {
+		if err == http.ErrNoCookie {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+
+		WriteError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// Get our stored session
+	token := cookie.Value
+	session, err := l.db.GetSession(token)
+	if err != nil {
+		WriteError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// Check if we have a session
+	if session == nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	// Check if the existing session has expired
+	if session.Expires.Before(time.Now()) {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	if err = l.db.RemoveSession(token); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     "session_token",
+		MaxAge:   -1,
+		HttpOnly: true,
+	})
 }
 
 // RefreshSession handles requests to refresh a session token.
