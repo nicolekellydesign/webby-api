@@ -2,8 +2,9 @@ package server
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
+
+	"github.com/go-chi/chi/v5"
 )
 
 // AddPhoto handles a request to add a file name to the
@@ -11,35 +12,17 @@ import (
 //
 // It requires a valid auth token.
 func (l Listener) AddPhoto(w http.ResponseWriter, r *http.Request) {
-	ok, code, err := checkSession(l.db, r)
-	if !ok {
-		if err != nil {
-			WriteError(w, code, err.Error())
-			return
-		}
-
-		// Session was not okay, but no error
-		// That means the session is not valid
-		w.WriteHeader(code)
-		return
-	}
-
-	if err := checkPreconditions(r, http.MethodPost, true); err != nil {
-		WriteError(w, http.StatusBadRequest, err.Error())
-		return
-	}
-
 	defer r.Body.Close()
 
 	var req AddPhotoRequest
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&req); err != nil {
-		WriteError(w, http.StatusBadRequest, "invalid request data")
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 		return
 	}
 
 	if err := l.db.AddPhoto(req.Filename); err != nil {
-		WriteError(w, http.StatusInternalServerError, fmt.Sprintf("Internal error: %s", err.Error()))
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -48,14 +31,9 @@ func (l Listener) AddPhoto(w http.ResponseWriter, r *http.Request) {
 
 // GetPhotos handles requests to get all photos from the database.
 func (l Listener) GetPhotos(w http.ResponseWriter, r *http.Request) {
-	if err := checkPreconditions(r, http.MethodGet, false); err != nil {
-		WriteError(w, http.StatusBadRequest, err.Error())
-		return
-	}
-
 	ret, err := l.db.GetPhotos()
 	if err != nil {
-		WriteError(w, http.StatusInternalServerError, fmt.Sprintf("Internal error: %s", err.Error()))
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -74,35 +52,9 @@ func (l Listener) GetPhotos(w http.ResponseWriter, r *http.Request) {
 //
 // It requires a valid auth token.
 func (l Listener) RemovePhoto(w http.ResponseWriter, r *http.Request) {
-	ok, code, err := checkSession(l.db, r)
-	if !ok {
-		if err != nil {
-			WriteError(w, code, err.Error())
-			return
-		}
-
-		// Session was not okay, but no error
-		// That means the session is not valid
-		w.WriteHeader(code)
-		return
-	}
-
-	if err := checkPreconditions(r, http.MethodPost, true); err != nil {
-		WriteError(w, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	defer r.Body.Close()
-
-	var req RemovePhotoRequest
-	decoder := json.NewDecoder(r.Body)
-	if err := decoder.Decode(&req); err != nil {
-		WriteError(w, http.StatusBadRequest, "invalid request data")
-		return
-	}
-
-	if err := l.db.RemovePhoto(req.Filename); err != nil {
-		WriteError(w, http.StatusInternalServerError, fmt.Sprintf("Internal error: %s", err.Error()))
+	fileName := chi.URLParam(r, "fileName")
+	if err := l.db.RemovePhoto(fileName); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
