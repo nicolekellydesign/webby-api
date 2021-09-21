@@ -93,7 +93,7 @@ Removes a slide with the given name from the gallery item that has the given ID.
 
 ### Photos
 
-These routes are for managing pictures pictures in the photography gallery.
+These routes are for managing pictures in the photography gallery.
 
 #### `/photos`: POST
 
