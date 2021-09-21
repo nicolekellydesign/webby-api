@@ -4,12 +4,6 @@ import (
 	"github.com/nicolekellydesign/webby-api/entities"
 )
 
-// AuthResponse is sent when a login is checked, and sends
-// the result of the login attempt.
-type AuthResponse struct {
-	Token string `json:"token"`
-}
-
 // GalleryResponse is sent when a client requests all of the
 // gallery items from the database.
 type GalleryResponse struct {
