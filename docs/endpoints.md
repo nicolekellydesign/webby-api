@@ -28,7 +28,7 @@ If `extended` is set to `true` in the JSON request, the session will be valid fo
 
 #### `/logout`: POST
 
-Endpoint to log a user out. This requires a valid session to work, which should be pretty self-explanitory.
+Endpoint to log a user out. This requires a valid session to work, which should be pretty self-explanatory.
 
 #### `/refresh`: POST
 
@@ -119,7 +119,7 @@ Returns a list of usernames. This is a privileged endpoint for an extra layer of
 
 #### `/users`: POST
 
-Adds a new administrator. Expects the following JSON body:
+Adds a new administrator. The endpoint expects the following JSON body:
 
 ```json
 {
