@@ -59,10 +59,17 @@ This is returned when a client sends an API request to get all users.
 ```json
 {
   "users": [
-    {
-      "username": string
-    },
-    . . . more users
+    . . . users
   ]
+}
+```
+
+Here is what the returned User struct looks like:
+
+```json
+{
+  "id": number,
+  "username": string,
+  "protected": bool
 }
 ```

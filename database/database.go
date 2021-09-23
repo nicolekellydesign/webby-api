@@ -22,7 +22,8 @@ var schema = `
 CREATE TABLE IF NOT EXISTS users (
 	id SERIAL PRIMARY KEY,
 	user_name TEXT UNIQUE NOT NULL,
-	pwdhash TEXT NOT NULL
+	pwdhash TEXT NOT NULL,
+	protected BOOL NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS photos (
@@ -264,9 +265,9 @@ func (db DB) RemoveSlide(galleryID, name string) error {
 }
 
 // AddUser inserts a new user into the database.
-func (db DB) AddUser(username, password string) error {
+func (db DB) AddUser(username, password string, protected bool) error {
 	tx := db.db.MustBegin()
-	tx.MustExec("INSERT INTO users (user_name, pwdhash) VALUES ($1, crypt($2, gen_salt('bf')));", username, password)
+	tx.MustExec("INSERT INTO users (user_name, pwdhash, protected) VALUES ($1, crypt($2, gen_salt('bf')), $3);", username, password, protected)
 
 	if err := tx.Commit(); err != nil {
 		tx.Rollback()
@@ -281,7 +282,7 @@ func (db DB) AddUser(username, password string) error {
 // given ID.
 func (db DB) GetUser(id string) (*entities.User, error) {
 	var user entities.User
-	err := db.db.Get(&user, "SELECT id, user_name FROM users WHERE id=$1;")
+	err := db.db.Get(&user, "SELECT id, user_name, protected FROM users WHERE id=$1;", id)
 	if err != nil {
 		db.log.Errorf("error getting user from database: %s\n", err)
 		return nil, err
@@ -293,7 +294,7 @@ func (db DB) GetUser(id string) (*entities.User, error) {
 // GetUsers fetches all of the users from the database.
 func (db DB) GetUsers() ([]*entities.User, error) {
 	ret := make([]*entities.User, 0)
-	if err := db.db.Select(&ret, "SELECT id, user_name FROM users;"); err != nil {
+	if err := db.db.Select(&ret, "SELECT id, user_name, protected FROM users;"); err != nil {
 		db.log.Errorf("error getting users from database: %s\n", err)
 		return nil, err
 	}

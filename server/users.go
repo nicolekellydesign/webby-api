@@ -33,7 +33,7 @@ func (l Listener) AddUser(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if err := l.db.AddUser(req.Username, req.Password); err != nil {
+	if err := l.db.AddUser(req.Username, req.Password, false); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -89,6 +89,19 @@ func (l Listener) RemoveUser(w http.ResponseWriter, r *http.Request) {
 
 	if session.ID == uint(converted) {
 		http.Error(w, "can't delete yourself", http.StatusBadRequest)
+		return
+	}
+
+	// Check if the user that the client wants to delete is a
+	// protected user, in which case they can't.
+	user, err := l.db.GetUser(id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if user.Protected {
+		http.Error(w, "protected users cannot be removed", http.StatusBadRequest)
 		return
 	}
 
