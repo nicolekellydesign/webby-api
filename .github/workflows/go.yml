@@ -22,7 +22,7 @@ jobs:
       run: go install golang.org/x/lint/golint@latest
 
     - name: Build
-      run: go build -v ./...
+      run: go build -v ./cmd/webby-cli
 
     - name: Test
       run: go test -v ./...
