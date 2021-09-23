@@ -43,9 +43,9 @@ func (l Listener) Serve() {
 		r.Post("/login", l.PerformLogin)
 		r.Post("/logout", l.PerformLogout)
 		r.Post("/refresh", l.RefreshSession)
-
-		l.router.Mount("/admin", l.adminRouter())
 	})
+
+	l.router.Mount("/api/admin", l.adminRouter())
 
 	addr := fmt.Sprintf("localhost:%d", l.Port)
 	http.ListenAndServe(addr, l.router)
@@ -70,8 +70,11 @@ func (l Listener) adminRouter() http.Handler {
 	r.Post("/photos", l.AddPhoto)
 	r.Delete("/photos/{fileName}", l.RemovePhoto)
 
-	r.Get("/users", l.GetUsers)
-	r.Post("/users", l.AddUser)
+	r.Route("/users", func(r chi.Router) {
+		r.Get("/", l.GetUsers)
+		r.Post("/", l.AddUser)
+		r.Delete("/{id}", l.RemoveUser)
+	})
 
 	return r
 }

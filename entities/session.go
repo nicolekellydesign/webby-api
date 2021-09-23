@@ -10,13 +10,14 @@ import (
 type Session struct {
 	Token    string
 	Username string `db:"user_name"`
+	ID       uint   `db:"user_id"`
 	Expires  time.Time
 }
 
 // NewSession creates a new login session with a unique
 // token generated as a UUID, and an expiry time of
 // five minutes.
-func NewSession(username string, extended bool) (*Session, error) {
+func NewSession(id uint, username string, extended bool) (*Session, error) {
 	token, err := uuid.NewV4()
 	if err != nil {
 		return nil, err
@@ -32,6 +33,7 @@ func NewSession(username string, extended bool) (*Session, error) {
 	return &Session{
 		Token:    token.String(),
 		Username: username,
+		ID:       id,
 		Expires:  expires,
 	}, nil
 }

@@ -30,7 +30,7 @@ func (l Listener) PerformLogin(w http.ResponseWriter, r *http.Request) {
 
 	// Send back the response
 	if user != nil && (*user != entities.User{}) {
-		session, err := entities.NewSession(user.Username, req.Extended)
+		session, err := entities.NewSession(user.ID, user.Username, req.Extended)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return

@@ -54,10 +54,15 @@ CREATE TABLE IF NOT EXISTS slides (
 CREATE TABLE IF NOT EXISTS sessions (
 	token TEXT UNIQUE NOT NULL PRIMARY KEY,
 	user_name TEXT UNIQUE NOT NULL,
+	user_id SERIAL UNIQUE NOT NULL,
 	expires TIMESTAMPTZ NOT NULL,
 	CONSTRAINT fk_user_name
 		FOREIGN KEY(user_name)
 		REFERENCES users(user_name)
+		ON DELETE CASCADE,
+	CONSTRAINT fk_user_id
+		FOREIGN KEY(user_id)
+		REFERENCES users(id)
 		ON DELETE CASCADE
 );
 `
@@ -272,13 +277,13 @@ func (db DB) AddUser(username, password string) error {
 	return nil
 }
 
-// GetLogin looks for a matching user for the given username and password. If
-// a match is found, a User struct is returned with the id and username.
-func (db DB) GetLogin(username, password string) (*entities.User, error) {
+// GetUser fetches a single user from the database with the
+// given ID.
+func (db DB) GetUser(id string) (*entities.User, error) {
 	var user entities.User
-	err := db.db.Get(&user, "SELECT id, user_name FROM users WHERE user_name=$1 AND (pwdhash = crypt($2, pwdhash));", username, password)
-	if err != nil && err != sql.ErrNoRows {
-		db.log.Errorf("error checking user login: %s\n", err)
+	err := db.db.Get(&user, "SELECT id, user_name FROM users WHERE id=$1;")
+	if err != nil {
+		db.log.Errorf("error getting user from database: %s\n", err)
 		return nil, err
 	}
 
@@ -296,10 +301,35 @@ func (db DB) GetUsers() ([]*entities.User, error) {
 	return ret, nil
 }
 
+// RemoveUser deletes a user from the database.
+func (db DB) RemoveUser(id string) error {
+	tx := db.db.MustBegin()
+	tx.MustExec("DELETE FROM users WHERE id=$1;", id)
+	if err := tx.Commit(); err != nil {
+		db.log.Errorf("error removing user from database: %s\n", err)
+		return err
+	}
+
+	return nil
+}
+
+// GetLogin looks for a matching user for the given username and password. If
+// a match is found, a User struct is returned with the id and username.
+func (db DB) GetLogin(username, password string) (*entities.User, error) {
+	var user entities.User
+	err := db.db.Get(&user, "SELECT id, user_name FROM users WHERE user_name=$1 AND (pwdhash = crypt($2, pwdhash));", username, password)
+	if err != nil && err != sql.ErrNoRows {
+		db.log.Errorf("error checking user login: %s\n", err)
+		return nil, err
+	}
+
+	return &user, nil
+}
+
 // AddSession saves a login session in the database.
 func (db DB) AddSession(session *entities.Session) error {
 	tx := db.db.MustBegin()
-	tx.MustExec("INSERT INTO sessions VALUES ($1, $2, $3);", session.Token, session.Username, session.Expires)
+	tx.MustExec("INSERT INTO sessions VALUES ($1, $2, $3, $4);", session.Token, session.Username, session.ID, session.Expires)
 
 	if err := tx.Commit(); err != nil {
 		tx.Rollback()
@@ -317,6 +347,7 @@ func (db DB) GetSession(token string) (*entities.Session, error) {
 	sql := `SELECT 
 		token,
 		user_name,
+		user_id,
 		expires
 	FROM
 		sessions
