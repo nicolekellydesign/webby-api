@@ -127,3 +127,7 @@ Adds a new administrator. The endpoint expects the following JSON body:
   "password": string
 }
 ```
+
+#### `/users/:id`: DELETE
+
+Removes an administrator. An admin cannot delete themselves.
