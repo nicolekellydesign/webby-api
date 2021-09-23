@@ -32,6 +32,11 @@ type AddUserArgs struct {
 	Password string `long:"password" arg:"true" desc:"Password of the user to add"`
 }
 
+// RemoveUserArgs holds the arguments for the delete user command.
+type RemoveUserArgs struct {
+	ID string `long:"id" arg:"true" desc:"ID of the user to remove"`
+}
+
 func init() {
 	// Set up the loggers
 	log = waterlog.New(os.Stdout, "webby-cli", log2.Ltime)
@@ -84,11 +89,28 @@ func main() {
 	})
 
 	cmd.Register(&cmd.Sub{
+		Name:  "deluser",
+		Alias: "d",
+		Short: "Remove a user from the database",
+		Args:  &RemoveUserArgs{},
+		Run:   RemoveUserFunc,
+	})
+
+	cmd.Register(&cmd.Sub{
+		Name:  "listusers",
+		Alias: "l",
+		Short: "List all users in the database",
+		Run:   ListUsersFunc,
+	})
+
+	cmd.Register(&cmd.Sub{
 		Name:  "start",
 		Alias: "s",
 		Short: "Start the API service",
 		Run:   StartFunc,
 	})
+
+	defer logFile.Close()
 
 	root.Run()
 }
