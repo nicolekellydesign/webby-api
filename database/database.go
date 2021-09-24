@@ -18,55 +18,55 @@ type DB struct {
 	log *waterlog.WaterLog
 }
 
-var schema = `
-CREATE TABLE IF NOT EXISTS users (
-	id SERIAL PRIMARY KEY,
-	user_name TEXT UNIQUE NOT NULL,
-	pwdhash TEXT NOT NULL,
-	protected BOOL NOT NULL
-);
+var tables = []string{
+	`CREATE TABLE users (
+		id SERIAL PRIMARY KEY,
+		user_name TEXT UNIQUE NOT NULL,
+		pwdhash TEXT NOT NULL,
+		protected BOOL NOT NULL
+	);`,
 
-CREATE TABLE IF NOT EXISTS photos (
-	id SERIAL PRIMARY KEY,
-	file_name TEXT NOT NULL
-);
+	`CREATE TABLE photos (
+		id SERIAL PRIMARY KEY,
+		file_name TEXT NOT NULL
+	);`,
 
-CREATE TABLE IF NOT EXISTS gallery_items (
-	id TEXT UNIQUE NOT NULL PRIMARY KEY,
-	title_line_1 TEXT NOT NULL,
-	title_line_2 TEXT NOT NULL,
-	thumbnail_location TEXT NOT NULL,
-	thumbnail_caption TEXT NOT NULL
-);
+	`CREATE TABLE gallery_items (
+		id TEXT UNIQUE NOT NULL PRIMARY KEY,
+		title_line_1 TEXT NOT NULL,
+		title_line_2 TEXT NOT NULL,
+		thumbnail_location TEXT NOT NULL,
+		thumbnail_caption TEXT NOT NULL
+	);`,
 
-CREATE TABLE IF NOT EXISTS slides (
-	id SERIAL PRIMARY KEY,
-	gallery_id TEXT NOT NULL,
-	name TEXT UNIQUE NOT NULL,
-	title TEXT NOT NULL,
-	caption TEXT NOT NULL,
-	location TEXT NOT NULL,
-	CONSTRAINT fk_gallery
-		FOREIGN KEY(gallery_id)
-		REFERENCES gallery_items(id)
-		ON DELETE CASCADE
-);
+	`CREATE TABLE slides (
+		id SERIAL PRIMARY KEY,
+		gallery_id TEXT NOT NULL,
+		name TEXT UNIQUE NOT NULL,
+		title TEXT NOT NULL,
+		caption TEXT NOT NULL,
+		location TEXT NOT NULL,
+		CONSTRAINT fk_gallery
+			FOREIGN KEY(gallery_id)
+			REFERENCES gallery_items(id)
+			ON DELETE CASCADE
+	);`,
 
-CREATE TABLE IF NOT EXISTS sessions (
-	token TEXT UNIQUE NOT NULL PRIMARY KEY,
-	user_name TEXT UNIQUE NOT NULL,
-	user_id SERIAL UNIQUE NOT NULL,
-	expires TIMESTAMPTZ NOT NULL,
-	CONSTRAINT fk_user_name
-		FOREIGN KEY(user_name)
-		REFERENCES users(user_name)
-		ON DELETE CASCADE,
-	CONSTRAINT fk_user_id
-		FOREIGN KEY(user_id)
-		REFERENCES users(id)
-		ON DELETE CASCADE
-);
-`
+	`CREATE TABLE sessions (
+		token TEXT UNIQUE NOT NULL PRIMARY KEY,
+		user_name TEXT UNIQUE NOT NULL,
+		user_id SERIAL UNIQUE NOT NULL,
+		expires TIMESTAMPTZ NOT NULL,
+		CONSTRAINT fk_user_name
+			FOREIGN KEY(user_name)
+			REFERENCES users(user_name)
+			ON DELETE CASCADE,
+		CONSTRAINT fk_user_id
+			FOREIGN KEY(user_id)
+			REFERENCES users(id)
+			ON DELETE CASCADE
+	);`,
+}
 
 // Connect opens a connection to the database and creates the
 // table structure.
@@ -77,15 +77,8 @@ func Connect(username, password, database string, log *waterlog.WaterLog) (*DB, 
 		log.Errorf("error connecting to Postgres database: %s\n", err)
 		return nil, err
 	}
-	log.Infof("connected to Postgres database with user '%s' using database name '%s'\n", username, database)
 
-	tx := db.MustBegin()
-	tx.MustExec(schema)
-	if err = tx.Commit(); err != nil {
-		tx.Rollback()
-		log.Errorf("error creating table: %s\n", err)
-		return nil, err
-	}
+	log.Infof("connected to Postgres database with user '%s' using database name '%s'\n", username, database)
 
 	self := DB{
 		db,
@@ -103,6 +96,29 @@ func (db DB) Close() {
 	} else {
 		db.log.Infoln("closed connection to database")
 	}
+}
+
+// InitSchema creates our tables in the database.
+func (db DB) InitSchema() error {
+	tx, err := db.db.Begin()
+	if err != nil {
+		db.log.Errorf("error creating a transaction: %s\n", err)
+		return err
+	}
+
+	for _, table := range tables {
+		tx.Exec(table)
+	}
+
+	if err := tx.Commit(); err != nil {
+		tx.Rollback()
+		db.log.Errorf("error creating table: %s\n", err)
+		return err
+	}
+
+	db.log.Infoln("table schemas created")
+
+	return nil
 }
 
 // AddPhoto inserts a new photo into the database.
