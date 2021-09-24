@@ -23,7 +23,7 @@ _cgo_export.*
 
 _testmain.go
 
-webby-cli
+/webby-cli
 *.exe
 *.test
 *.prof
