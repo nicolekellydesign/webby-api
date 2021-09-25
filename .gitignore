@@ -28,6 +28,3 @@ _testmain.go
 *.test
 *.prof
 *.out
-
-webby-api.log
-.signingKey

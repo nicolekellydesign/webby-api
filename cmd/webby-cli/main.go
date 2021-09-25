@@ -21,9 +21,7 @@ var (
 	dbPassword string
 	dbName     string
 
-	fileLogger *waterlog.WaterLog
-	log        *waterlog.WaterLog
-	logFile    *os.File
+	log *waterlog.WaterLog
 )
 
 // AddUserArgs holds the arguments for the add user command.
@@ -43,33 +41,20 @@ func init() {
 	log.SetLevel(level.Info)
 	log.SetFormat(format.Min)
 
-	var err error
-	logFile, err = os.Create("webby-api.log")
-	if err != nil {
-		log.Fatalf("Unable to create or open log file: %s", err)
-	}
-
-	fileLogger = waterlog.New(logFile, "webby-db", log2.Ldate|log2.Ltime)
-	fileLogger.SetLevel(level.Info)
-	fileLogger.SetFormat(format.Un)
-
 	// Get our environment variables
 	found := false
 	dbUser, found = os.LookupEnv(envUserKey)
 	if !found {
-		logFile.Close()
 		log.Fatalf("required environment variable '%s' not set", envUserKey)
 	}
 
 	dbPassword, found = os.LookupEnv(envPasswordKey)
 	if !found {
-		logFile.Close()
 		log.Fatalf("required environment variable '%s' not set", envPasswordKey)
 	}
 
 	dbName, found = os.LookupEnv(envNameKey)
 	if !found {
-		logFile.Close()
 		log.Fatalf("required environment variable '%s' not set", envNameKey)
 	}
 }
@@ -116,8 +101,6 @@ func main() {
 		Short: "Start the API service",
 		Run:   StartFunc,
 	})
-
-	defer logFile.Close()
 
 	root.Run()
 }

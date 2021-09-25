@@ -14,7 +14,7 @@ import (
 
 // AddUserFunc creates a new protected user in the database.
 func AddUserFunc(root *cmd.Root, c *cmd.Sub) {
-	db, err := database.Connect(dbUser, dbPassword, dbName, fileLogger)
+	db, err := database.Connect(dbUser, dbPassword, dbName)
 	if err != nil {
 		log.Fatalf("Unable to connect to the database: %s", err)
 	}
@@ -30,7 +30,7 @@ func AddUserFunc(root *cmd.Root, c *cmd.Sub) {
 
 // ListUsersFunc prints all of the users in the database.
 func ListUsersFunc(root *cmd.Root, c *cmd.Sub) {
-	db, err := database.Connect(dbUser, dbPassword, dbName, fileLogger)
+	db, err := database.Connect(dbUser, dbPassword, dbName)
 	if err != nil {
 		log.Fatalf("Unable to connect to the database: %s", err)
 	}
@@ -52,7 +52,7 @@ func ListUsersFunc(root *cmd.Root, c *cmd.Sub) {
 
 // RemoveUserFunc removes a user from the database.
 func RemoveUserFunc(root *cmd.Root, c *cmd.Sub) {
-	db, err := database.Connect(dbUser, dbPassword, dbName, fileLogger)
+	db, err := database.Connect(dbUser, dbPassword, dbName)
 	if err != nil {
 		log.Fatalf("Unable to connect to the database: %s", err)
 	}
@@ -68,7 +68,7 @@ func RemoveUserFunc(root *cmd.Root, c *cmd.Sub) {
 
 // InitFunc initializes our database schema.
 func InitFunc(root *cmd.Root, c *cmd.Sub) {
-	db, err := database.Connect(dbUser, dbPassword, dbName, fileLogger)
+	db, err := database.Connect(dbUser, dbPassword, dbName)
 	if err != nil {
 		log.Fatalf("Unable to connect to the database: %s", err)
 	}
@@ -83,7 +83,7 @@ func InitFunc(root *cmd.Root, c *cmd.Sub) {
 // StartFunc opens a database connection and starts an HTTP server.
 func StartFunc(root *cmd.Root, c *cmd.Sub) {
 	// Start our database connection
-	db, err := database.Connect(dbUser, dbPassword, dbName, fileLogger)
+	db, err := database.Connect(dbUser, dbPassword, dbName)
 	if err != nil {
 		log.Fatalf("Unable to connect to the database: %s", err)
 	}

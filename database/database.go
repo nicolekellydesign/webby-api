@@ -4,8 +4,6 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/DataDrake/waterlog"
-
 	// This is commented because I guess that's all sqlx needs
 	_ "github.com/jackc/pgx/v4/stdlib"
 	"github.com/jmoiron/sqlx"
@@ -14,8 +12,7 @@ import (
 
 // DB holds our database connection.
 type DB struct {
-	db  *sqlx.DB
-	log *waterlog.WaterLog
+	db *sqlx.DB
 }
 
 var tables = []string{
@@ -70,19 +67,15 @@ var tables = []string{
 
 // Connect opens a connection to the database and creates the
 // table structure.
-func Connect(username, password, database string, log *waterlog.WaterLog) (*DB, error) {
+func Connect(username, password, database string) (*DB, error) {
 	source := fmt.Sprintf("host=localhost user=%s password=%s dbname=%s sslmode=disable timezone=UTC", username, password, database)
 	db, err := sqlx.Connect("pgx", source)
 	if err != nil {
-		log.Errorf("error connecting to Postgres database: %s\n", err)
 		return nil, err
 	}
 
-	log.Infof("connected to Postgres database with user '%s' using database name '%s'\n", username, database)
-
 	self := DB{
 		db,
-		log,
 	}
 
 	return &self, nil
@@ -91,18 +84,13 @@ func Connect(username, password, database string, log *waterlog.WaterLog) (*DB, 
 // Close closes the database connection and waits for all current
 // queries to finish.
 func (db DB) Close() {
-	if err := db.db.Close(); err != nil {
-		db.log.Errorf("error closing database connection: %s\n", err)
-	} else {
-		db.log.Infoln("closed connection to database")
-	}
+	db.db.Close()
 }
 
 // InitSchema creates our tables in the database.
 func (db DB) InitSchema() error {
 	tx, err := db.db.Begin()
 	if err != nil {
-		db.log.Errorf("error creating a transaction: %s\n", err)
 		return err
 	}
 
@@ -112,11 +100,8 @@ func (db DB) InitSchema() error {
 
 	if err := tx.Commit(); err != nil {
 		tx.Rollback()
-		db.log.Errorf("error creating table: %s\n", err)
 		return err
 	}
-
-	db.log.Infoln("table schemas created")
 
 	return nil
 }
@@ -128,7 +113,6 @@ func (db DB) AddPhoto(fileName string) error {
 
 	if err := tx.Commit(); err != nil {
 		tx.Rollback()
-		db.log.Errorf("error adding photo to database: %s\n", err)
 		return err
 	}
 
@@ -139,7 +123,6 @@ func (db DB) AddPhoto(fileName string) error {
 func (db DB) GetPhotos() ([]*entities.Photo, error) {
 	ret := make([]*entities.Photo, 0)
 	if err := db.db.Select(&ret, "SELECT file_name FROM photos;"); err != nil {
-		db.log.Errorf("error getting photos from database: %s\n", err)
 		return nil, err
 	}
 
@@ -154,7 +137,6 @@ func (db DB) RemovePhoto(fileName string) error {
 
 	if err := tx.Commit(); err != nil {
 		tx.Rollback()
-		db.log.Errorf("error removing photo from database: %s\n", err)
 		return err
 	}
 
@@ -177,7 +159,6 @@ func (db DB) AddGalleryItem(item entities.GalleryItem) error {
 
 	if err := tx.Commit(); err != nil {
 		tx.Rollback()
-		db.log.Errorf("error adding gallery item to database: %s\n", err)
 		return err
 	}
 
@@ -199,7 +180,6 @@ func (db DB) GetGalleryItems() ([]*entities.GalleryItem, error) {
 	FROM gallery_items;`
 
 	if err := db.db.Select(&items, query); err != nil {
-		db.log.Errorf("error getting gallery items from the database: %s\n", err)
 		return nil, err
 	}
 
@@ -214,7 +194,6 @@ func (db DB) GetGalleryItems() ([]*entities.GalleryItem, error) {
 		FROM slides WHERE gallery_id=$1;`
 
 		if err := db.db.Select(&slides, query, item.Name); err != nil {
-			db.log.Errorf("error getting slide from the database: %s\n", err)
 			continue
 		}
 
@@ -231,7 +210,6 @@ func (db DB) RemoveGalleryItem(name string) error {
 
 	if err := tx.Commit(); err != nil {
 		tx.Rollback()
-		db.log.Errorf("error removing gallery item from database: %s\n", err)
 		return err
 	}
 
@@ -259,7 +237,6 @@ func (db DB) AddSlide(slide entities.Slide) error {
 	tx.NamedExec(sql, slide)
 	if err := tx.Commit(); err != nil {
 		tx.Rollback()
-		db.log.Errorf("error adding slide to database: %s\n", err)
 		return err
 	}
 
@@ -273,7 +250,6 @@ func (db DB) RemoveSlide(galleryID, name string) error {
 
 	if err := tx.Commit(); err != nil {
 		tx.Rollback()
-		db.log.Errorf("error removing a slide from database: %s\n", err)
 		return err
 	}
 
@@ -287,7 +263,6 @@ func (db DB) AddUser(username, password string, protected bool) error {
 
 	if err := tx.Commit(); err != nil {
 		tx.Rollback()
-		db.log.Errorf("error adding user to database: %s\n", err)
 		return err
 	}
 
@@ -300,7 +275,6 @@ func (db DB) GetUser(id string) (*entities.User, error) {
 	var user entities.User
 	err := db.db.Get(&user, "SELECT id, user_name, protected FROM users WHERE id=$1;", id)
 	if err != nil {
-		db.log.Errorf("error getting user from database: %s\n", err)
 		return nil, err
 	}
 
@@ -311,7 +285,6 @@ func (db DB) GetUser(id string) (*entities.User, error) {
 func (db DB) GetUsers() ([]*entities.User, error) {
 	ret := make([]*entities.User, 0)
 	if err := db.db.Select(&ret, "SELECT id, user_name, protected FROM users;"); err != nil {
-		db.log.Errorf("error getting users from database: %s\n", err)
 		return nil, err
 	}
 
@@ -323,7 +296,6 @@ func (db DB) RemoveUser(id string) error {
 	tx := db.db.MustBegin()
 	tx.MustExec("DELETE FROM users WHERE id=$1;", id)
 	if err := tx.Commit(); err != nil {
-		db.log.Errorf("error removing user from database: %s\n", err)
 		return err
 	}
 
@@ -336,7 +308,6 @@ func (db DB) GetLogin(username, password string) (*entities.User, error) {
 	var user entities.User
 	err := db.db.Get(&user, "SELECT id, user_name FROM users WHERE user_name=$1 AND (pwdhash = crypt($2, pwdhash));", username, password)
 	if err != nil && err != sql.ErrNoRows {
-		db.log.Errorf("error checking user login: %s\n", err)
 		return nil, err
 	}
 
@@ -350,7 +321,6 @@ func (db DB) AddSession(session *entities.Session) error {
 
 	if err := tx.Commit(); err != nil {
 		tx.Rollback()
-		db.log.Errorf("error saving session in database: %s\n", err)
 		return err
 	}
 
@@ -372,7 +342,6 @@ func (db DB) GetSession(token string) (*entities.Session, error) {
 		token = $1;`
 
 	if err := db.db.Get(&session, sql, token); err != nil {
-		db.log.Errorf("error getting session from database: %s\n", err)
 		return nil, err
 	}
 
@@ -386,7 +355,6 @@ func (db DB) RemoveSession(token string) error {
 
 	if err := tx.Commit(); err != nil {
 		tx.Rollback()
-		db.log.Errorf("error removing a session from database: %s\n", err)
 		return err
 	}
 
@@ -401,7 +369,6 @@ func (db DB) RemoveSessionForName(username string) error {
 
 	if err := tx.Commit(); err != nil {
 		tx.Rollback()
-		db.log.Errorf("error removing a session from database: %s\n", err)
 		return err
 	}
 
@@ -422,7 +389,6 @@ func (db DB) UpdateSession(session *entities.Session) error {
 
 	if err := tx.Commit(); err != nil {
 		tx.Rollback()
-		db.log.Errorf("error updating a session in the database: %s\n", err)
 		return err
 	}
 
