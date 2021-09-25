@@ -22,7 +22,7 @@ func (l Listener) AddPhoto(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := l.db.AddPhoto(req.Filename); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, dbError, http.StatusInternalServerError)
 		return
 	}
 
@@ -33,7 +33,7 @@ func (l Listener) AddPhoto(w http.ResponseWriter, r *http.Request) {
 func (l Listener) GetPhotos(w http.ResponseWriter, r *http.Request) {
 	ret, err := l.db.GetPhotos()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, dbError, http.StatusInternalServerError)
 		return
 	}
 
@@ -54,7 +54,7 @@ func (l Listener) GetPhotos(w http.ResponseWriter, r *http.Request) {
 func (l Listener) RemovePhoto(w http.ResponseWriter, r *http.Request) {
 	fileName := chi.URLParam(r, "fileName")
 	if err := l.db.RemovePhoto(fileName); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, dbError, http.StatusInternalServerError)
 		return
 	}
 

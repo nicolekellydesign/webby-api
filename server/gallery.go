@@ -21,7 +21,7 @@ func (l Listener) AddGalleryItem(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := l.db.AddGalleryItem(req.Item); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, dbError, http.StatusInternalServerError)
 		return
 	}
 
@@ -33,7 +33,7 @@ func (l Listener) AddGalleryItem(w http.ResponseWriter, r *http.Request) {
 func (l Listener) GetGalleryItems(w http.ResponseWriter, r *http.Request) {
 	ret, err := l.db.GetGalleryItems()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, dbError, http.StatusInternalServerError)
 		return
 	}
 
@@ -53,7 +53,7 @@ func (l Listener) GetGalleryItems(w http.ResponseWriter, r *http.Request) {
 func (l Listener) RemoveGalleryItem(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	if err := l.db.RemoveGalleryItem(id); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, dbError, http.StatusInternalServerError)
 		return
 	}
 
@@ -76,7 +76,7 @@ func (l Listener) AddSlide(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	req.Slide.GalleryID = id
 	if err := l.db.AddSlide(req.Slide); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, dbError, http.StatusInternalServerError)
 		return
 	}
 
@@ -90,7 +90,7 @@ func (l Listener) RemoveSlide(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	name := chi.URLParam(r, "name")
 	if err := l.db.RemoveSlide(id, name); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, dbError, http.StatusInternalServerError)
 		return
 	}
 

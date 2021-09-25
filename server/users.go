@@ -21,7 +21,7 @@ func (l Listener) AddUser(w http.ResponseWriter, r *http.Request) {
 
 	users, err := l.db.GetUsers()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, dbError, http.StatusInternalServerError)
 		return
 	}
 
@@ -34,7 +34,7 @@ func (l Listener) AddUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := l.db.AddUser(req.Username, req.Password, false); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, dbError, http.StatusInternalServerError)
 		return
 	}
 
@@ -45,7 +45,7 @@ func (l Listener) AddUser(w http.ResponseWriter, r *http.Request) {
 func (l Listener) GetUsers(w http.ResponseWriter, r *http.Request) {
 	ret, err := l.db.GetUsers()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, dbError, http.StatusInternalServerError)
 		return
 	}
 
@@ -78,7 +78,7 @@ func (l Listener) RemoveUser(w http.ResponseWriter, r *http.Request) {
 	// we have to get the session to check the user ID.
 	session, err := l.db.GetSession(cookie.Value)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, dbError, http.StatusInternalServerError)
 	}
 
 	converted, err := strconv.ParseUint(id, 10, 32)
@@ -96,7 +96,7 @@ func (l Listener) RemoveUser(w http.ResponseWriter, r *http.Request) {
 	// protected user, in which case they can't.
 	user, err := l.db.GetUser(id)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, dbError, http.StatusInternalServerError)
 		return
 	}
 
@@ -106,7 +106,7 @@ func (l Listener) RemoveUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := l.db.RemoveUser(id); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, dbError, http.StatusInternalServerError)
 		return
 	}
 

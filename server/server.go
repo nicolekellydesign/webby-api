@@ -10,6 +10,8 @@ import (
 	"github.com/nicolekellydesign/webby-api/database"
 )
 
+const dbError = "internal database error"
+
 // Listener handles requests to our API endpoints.
 type Listener struct {
 	Port int
@@ -97,7 +99,7 @@ func (l Listener) adminOnly(next http.Handler) http.Handler {
 		token := cookie.Value
 		session, err := l.db.GetSession(token)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(w, dbError, http.StatusInternalServerError)
 			return
 		}
 
@@ -111,7 +113,7 @@ func (l Listener) adminOnly(next http.Handler) http.Handler {
 		// If it has expired, remove it from the database.
 		if time.Now().After(session.Expires) {
 			if err = l.db.RemoveSession(token); err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
+				http.Error(w, dbError, http.StatusInternalServerError)
 				return
 			}
 

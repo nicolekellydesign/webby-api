@@ -24,7 +24,7 @@ func (l Listener) PerformLogin(w http.ResponseWriter, r *http.Request) {
 	// Check if the login should be a success
 	user, err := l.db.GetLogin(req.Username, req.Password)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, dbError, http.StatusInternalServerError)
 		return
 	}
 
@@ -38,12 +38,12 @@ func (l Listener) PerformLogin(w http.ResponseWriter, r *http.Request) {
 
 		// Remove any existing session for this user from the database
 		if err := l.db.RemoveSessionForName(user.Username); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(w, dbError, http.StatusInternalServerError)
 			return
 		}
 
 		if err = l.db.AddSession(session); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(w, dbError, http.StatusInternalServerError)
 			return
 		}
 
@@ -77,7 +77,7 @@ func (l Listener) PerformLogout(w http.ResponseWriter, r *http.Request) {
 	token := cookie.Value
 	session, err := l.db.GetSession(token)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, dbError, http.StatusInternalServerError)
 		return
 	}
 
@@ -124,7 +124,7 @@ func (l Listener) RefreshSession(w http.ResponseWriter, r *http.Request) {
 	token := cookie.Value
 	session, err := l.db.GetSession(token)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, dbError, http.StatusInternalServerError)
 		return
 	}
 
@@ -143,7 +143,7 @@ func (l Listener) RefreshSession(w http.ResponseWriter, r *http.Request) {
 	// Update the session to be valid for another 5 mins
 	session.Expires = time.Now().Add(300 * time.Second).UTC()
 	if err = l.db.UpdateSession(session); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, dbError, http.StatusInternalServerError)
 		return
 	}
 
