@@ -96,10 +96,10 @@ func main() {
 	})
 
 	cmd.Register(&cmd.Sub{
-		Name:  "start",
+		Name:  "serve",
 		Alias: "s",
-		Short: "Start the API service",
-		Run:   StartFunc,
+		Short: "Start serving the API endpoints",
+		Run:   ServeFunc,
 	})
 
 	root.Run()

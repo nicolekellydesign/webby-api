@@ -1,6 +1,6 @@
 # Endpoints
 
-All endpoints are inside the `/api` route. So for example, the endpoint to get all gallery items would be at `/api/gallery`.
+All endpoints for the V1 API are inside the `/api/v1` route. So for example, the endpoint to get all gallery items would be at `/api/v1/gallery`.
 
 ## Public Routes
 
@@ -46,7 +46,7 @@ Endpoint to get all stored photography gallery items. See the responses doc for 
 
 ## Admin Routes
 
-All admin routes are in the `/api/admin` space and require a valid session to interact with.
+All admin routes are in the `/api/v1/admin` space and require a valid session to interact with.
 
 ### Gallery
 

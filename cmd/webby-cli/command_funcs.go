@@ -80,8 +80,8 @@ func InitFunc(root *cmd.Root, c *cmd.Sub) {
 	log.Goodln("Database schema created successfully")
 }
 
-// StartFunc opens a database connection and starts an HTTP server.
-func StartFunc(root *cmd.Root, c *cmd.Sub) {
+// ServeFunc opens a database connection and starts serving our HTTP endpoints.
+func ServeFunc(root *cmd.Root, c *cmd.Sub) {
 	// Start our database connection
 	db, err := database.Connect(dbUser, dbPassword, dbName)
 	if err != nil {
