@@ -1,4 +1,4 @@
-package server
+package v1
 
 import (
 	"encoding/json"
@@ -10,7 +10,7 @@ import (
 
 // PerformLogin checks if the given credentials match, and if so, generates
 // and responds with an auth token.
-func (l Listener) PerformLogin(w http.ResponseWriter, r *http.Request) {
+func (a API) PerformLogin(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	// Decode the user that was sent
@@ -22,7 +22,7 @@ func (l Listener) PerformLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the login should be a success
-	user, err := l.db.GetLogin(req.Username, req.Password)
+	user, err := a.db.GetLogin(req.Username, req.Password)
 	if err != nil {
 		http.Error(w, dbError, http.StatusInternalServerError)
 		return
@@ -37,12 +37,12 @@ func (l Listener) PerformLogin(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Remove any existing session for this user from the database
-		if err := l.db.RemoveSessionForName(user.Username); err != nil {
+		if err := a.db.RemoveSessionForName(user.Username); err != nil {
 			http.Error(w, dbError, http.StatusInternalServerError)
 			return
 		}
 
-		if err = l.db.AddSession(session); err != nil {
+		if err = a.db.AddSession(session); err != nil {
 			http.Error(w, dbError, http.StatusInternalServerError)
 			return
 		}
@@ -60,7 +60,7 @@ func (l Listener) PerformLogin(w http.ResponseWriter, r *http.Request) {
 }
 
 // PerformLogout handles when a user wants to log out of their session.
-func (l Listener) PerformLogout(w http.ResponseWriter, r *http.Request) {
+func (a API) PerformLogout(w http.ResponseWriter, r *http.Request) {
 	// Get our session cookie if we have one
 	cookie, err := r.Cookie("session_token")
 	if err != nil {
@@ -75,7 +75,7 @@ func (l Listener) PerformLogout(w http.ResponseWriter, r *http.Request) {
 
 	// Get our stored session
 	token := cookie.Value
-	session, err := l.db.GetSession(token)
+	session, err := a.db.GetSession(token)
 	if err != nil {
 		http.Error(w, dbError, http.StatusInternalServerError)
 		return
@@ -93,7 +93,7 @@ func (l Listener) PerformLogout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = l.db.RemoveSession(token); err != nil {
+	if err = a.db.RemoveSession(token); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -107,7 +107,7 @@ func (l Listener) PerformLogout(w http.ResponseWriter, r *http.Request) {
 }
 
 // RefreshSession handles requests to refresh a session token.
-func (l Listener) RefreshSession(w http.ResponseWriter, r *http.Request) {
+func (a API) RefreshSession(w http.ResponseWriter, r *http.Request) {
 	// Get our session cookie if we have one
 	cookie, err := r.Cookie("session_token")
 	if err != nil {
@@ -122,7 +122,7 @@ func (l Listener) RefreshSession(w http.ResponseWriter, r *http.Request) {
 
 	// Get our stored session
 	token := cookie.Value
-	session, err := l.db.GetSession(token)
+	session, err := a.db.GetSession(token)
 	if err != nil {
 		http.Error(w, dbError, http.StatusInternalServerError)
 		return
@@ -142,7 +142,7 @@ func (l Listener) RefreshSession(w http.ResponseWriter, r *http.Request) {
 
 	// Update the session to be valid for another 5 mins
 	session.Expires = time.Now().Add(300 * time.Second).UTC()
-	if err = l.db.UpdateSession(session); err != nil {
+	if err = a.db.UpdateSession(session); err != nil {
 		http.Error(w, dbError, http.StatusInternalServerError)
 		return
 	}

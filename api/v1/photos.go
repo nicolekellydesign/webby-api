@@ -1,4 +1,4 @@
-package server
+package v1
 
 import (
 	"encoding/json"
@@ -11,7 +11,7 @@ import (
 // photos database.
 //
 // It requires a valid auth token.
-func (l Listener) AddPhoto(w http.ResponseWriter, r *http.Request) {
+func (a API) AddPhoto(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	var req AddPhotoRequest
@@ -21,7 +21,7 @@ func (l Listener) AddPhoto(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := l.db.AddPhoto(req.Filename); err != nil {
+	if err := a.db.AddPhoto(req.Filename); err != nil {
 		http.Error(w, dbError, http.StatusInternalServerError)
 		return
 	}
@@ -30,8 +30,8 @@ func (l Listener) AddPhoto(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetPhotos handles requests to get all photos from the database.
-func (l Listener) GetPhotos(w http.ResponseWriter, r *http.Request) {
-	ret, err := l.db.GetPhotos()
+func (a API) GetPhotos(w http.ResponseWriter, r *http.Request) {
+	ret, err := a.db.GetPhotos()
 	if err != nil {
 		http.Error(w, dbError, http.StatusInternalServerError)
 		return
@@ -51,9 +51,9 @@ func (l Listener) GetPhotos(w http.ResponseWriter, r *http.Request) {
 // photos database.
 //
 // It requires a valid auth token.
-func (l Listener) RemovePhoto(w http.ResponseWriter, r *http.Request) {
+func (a API) RemovePhoto(w http.ResponseWriter, r *http.Request) {
 	fileName := chi.URLParam(r, "fileName")
-	if err := l.db.RemovePhoto(fileName); err != nil {
+	if err := a.db.RemovePhoto(fileName); err != nil {
 		http.Error(w, dbError, http.StatusInternalServerError)
 		return
 	}

@@ -1,4 +1,4 @@
-package server
+package v1
 
 import (
 	"encoding/json"
@@ -9,7 +9,7 @@ import (
 )
 
 // AddUser adds a new user into the database.
-func (l Listener) AddUser(w http.ResponseWriter, r *http.Request) {
+func (a API) AddUser(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	var req AddUserRequest
@@ -19,7 +19,7 @@ func (l Listener) AddUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	users, err := l.db.GetUsers()
+	users, err := a.db.GetUsers()
 	if err != nil {
 		http.Error(w, dbError, http.StatusInternalServerError)
 		return
@@ -33,7 +33,7 @@ func (l Listener) AddUser(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if err := l.db.AddUser(req.Username, req.Password, false); err != nil {
+	if err := a.db.AddUser(req.Username, req.Password, false); err != nil {
 		http.Error(w, dbError, http.StatusInternalServerError)
 		return
 	}
@@ -42,8 +42,8 @@ func (l Listener) AddUser(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetUsers gets all of the users from the database.
-func (l Listener) GetUsers(w http.ResponseWriter, r *http.Request) {
-	ret, err := l.db.GetUsers()
+func (a API) GetUsers(w http.ResponseWriter, r *http.Request) {
+	ret, err := a.db.GetUsers()
 	if err != nil {
 		http.Error(w, dbError, http.StatusInternalServerError)
 		return
@@ -61,7 +61,7 @@ func (l Listener) GetUsers(w http.ResponseWriter, r *http.Request) {
 
 // RemoveUser deletes a user from the database, and invalidates any
 // active sessions that the user had.
-func (l Listener) RemoveUser(w http.ResponseWriter, r *http.Request) {
+func (a API) RemoveUser(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 
 	cookie, err := r.Cookie("session_token")
@@ -76,7 +76,7 @@ func (l Listener) RemoveUser(w http.ResponseWriter, r *http.Request) {
 
 	// We don't want users to be able to delete themselves, so
 	// we have to get the session to check the user ID.
-	session, err := l.db.GetSession(cookie.Value)
+	session, err := a.db.GetSession(cookie.Value)
 	if err != nil {
 		http.Error(w, dbError, http.StatusInternalServerError)
 	}
@@ -94,7 +94,7 @@ func (l Listener) RemoveUser(w http.ResponseWriter, r *http.Request) {
 
 	// Check if the user that the client wants to delete is a
 	// protected user, in which case they can't.
-	user, err := l.db.GetUser(id)
+	user, err := a.db.GetUser(id)
 	if err != nil {
 		http.Error(w, dbError, http.StatusInternalServerError)
 		return
@@ -105,7 +105,7 @@ func (l Listener) RemoveUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := l.db.RemoveUser(id); err != nil {
+	if err := a.db.RemoveUser(id); err != nil {
 		http.Error(w, dbError, http.StatusInternalServerError)
 		return
 	}
