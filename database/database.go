@@ -53,7 +53,8 @@ var tables = []string{
 		token TEXT UNIQUE NOT NULL PRIMARY KEY,
 		user_name TEXT UNIQUE NOT NULL,
 		user_id SERIAL UNIQUE NOT NULL,
-		expires TIMESTAMPTZ NOT NULL,
+		created TIMESTAMPTZ NOT NULL,
+		max_age BIGINT NOT NULL,
 		CONSTRAINT fk_user_name
 			FOREIGN KEY(user_name)
 			REFERENCES users(user_name)
@@ -317,7 +318,7 @@ func (db DB) GetLogin(username, password string) (*entities.User, error) {
 // AddSession saves a login session in the database.
 func (db DB) AddSession(session *entities.Session) error {
 	tx := db.db.MustBegin()
-	tx.MustExec("INSERT INTO sessions VALUES ($1, $2, $3, $4);", session.Token, session.Username, session.ID, session.Expires)
+	tx.MustExec("INSERT INTO sessions VALUES ($1, $2, $3, $4, $5);", session.Token, session.Username, session.ID, session.Created, session.MaxAge)
 
 	if err := tx.Commit(); err != nil {
 		tx.Rollback()
@@ -331,17 +332,19 @@ func (db DB) AddSession(session *entities.Session) error {
 func (db DB) GetSession(token string) (*entities.Session, error) {
 	var session entities.Session
 
-	sql := `SELECT 
+	query := `SELECT 
 		token,
 		user_name,
 		user_id,
-		expires
+		created,
+		max_age
 	FROM
 		sessions
 	WHERE
 		token = $1;`
 
-	if err := db.db.Get(&session, sql, token); err != nil {
+	err := db.db.Get(&session, query, token)
+	if err != nil && err != sql.ErrNoRows {
 		return nil, err
 	}
 
@@ -381,7 +384,7 @@ func (db DB) UpdateSession(session *entities.Session) error {
 
 	sql := `UPDATE sessions
 			SET
-				expires = :expires
+				max_age = :max_age
 			WHERE
 				token = :token;`
 

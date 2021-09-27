@@ -11,7 +11,8 @@ type Session struct {
 	Token    string
 	Username string `db:"user_name"`
 	ID       uint   `db:"user_id"`
-	Expires  time.Time
+	Created  time.Time
+	MaxAge   int `db:"max_age"`
 }
 
 // NewSession creates a new login session with a unique
@@ -23,17 +24,17 @@ func NewSession(id uint, username string, extended bool) (*Session, error) {
 		return nil, err
 	}
 
-	var expires time.Time
+	created := time.Now().UTC()
+	maxAge := 0
 	if extended {
-		expires = time.Now().Add(30 * 24 * time.Hour).UTC()
-	} else {
-		expires = time.Now().Add(5 * time.Minute).UTC()
+		maxAge = created.Add(30 * 24 * time.Hour).Second()
 	}
 
 	return &Session{
 		Token:    token.String(),
 		Username: username,
 		ID:       id,
-		Expires:  expires,
+		Created:  created,
+		MaxAge:   maxAge,
 	}, nil
 }

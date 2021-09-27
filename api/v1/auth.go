@@ -8,6 +8,59 @@ import (
 	"github.com/nicolekellydesign/webby-api/entities"
 )
 
+// CheckSession checks if the request has a valid session.
+func (a API) CheckSession(w http.ResponseWriter, r *http.Request) {
+	// Get our session cookie if we have one
+	cookie, err := r.Cookie("session_token")
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		encoder := json.NewEncoder(w)
+		encoder.Encode(&CheckSessionResponse{Valid: false})
+		return
+	}
+
+	// Get our stored session
+	token := cookie.Value
+	session, err := a.db.GetSession(token)
+	if err != nil {
+		http.Error(w, dbError, http.StatusInternalServerError)
+		return
+	}
+
+	// Check if we have a session
+	if session == nil || (*session == entities.Session{}) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		encoder := json.NewEncoder(w)
+		encoder.Encode(&CheckSessionResponse{Valid: false})
+		return
+	}
+
+	// Check if the session has expired.
+	// If it has expired, remove it from the database.
+	if session.MaxAge > 0 {
+		expires := session.Created.Add(time.Duration(session.MaxAge) * time.Second)
+		if time.Now().After(expires) {
+			if err = a.db.RemoveSession(token); err != nil {
+				http.Error(w, dbError, http.StatusInternalServerError)
+				return
+			}
+
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			encoder := json.NewEncoder(w)
+			encoder.Encode(&CheckSessionResponse{Valid: false})
+			return
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	encoder := json.NewEncoder(w)
+	encoder.Encode(&CheckSessionResponse{Valid: true})
+}
+
 // PerformLogin checks if the given credentials match, and if so, generates
 // and responds with an auth token.
 func (a API) PerformLogin(w http.ResponseWriter, r *http.Request) {
@@ -50,8 +103,10 @@ func (a API) PerformLogin(w http.ResponseWriter, r *http.Request) {
 		http.SetCookie(w, &http.Cookie{
 			Name:     "session_token",
 			Value:    session.Token,
-			Expires:  session.Expires,
+			Path:     "/",
+			MaxAge:   session.MaxAge,
 			HttpOnly: true,
+			Secure:   true,
 		})
 		w.WriteHeader(http.StatusOK)
 	} else {
@@ -82,15 +137,18 @@ func (a API) PerformLogout(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if we have a session
-	if session == nil {
+	if session == nil || (*session == entities.Session{}) {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 
 	// Check if the existing session has expired
-	if session.Expires.Before(time.Now()) {
-		w.WriteHeader(http.StatusUnauthorized)
-		return
+	if session.MaxAge > 0 {
+		expires := session.Created.Add(time.Duration(session.MaxAge) * time.Second)
+		if time.Now().After(expires) {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
 	}
 
 	if err = a.db.RemoveSession(token); err != nil {
@@ -100,58 +158,10 @@ func (a API) PerformLogout(w http.ResponseWriter, r *http.Request) {
 
 	http.SetCookie(w, &http.Cookie{
 		Name:     "session_token",
+		Path:     "/",
 		MaxAge:   -1,
 		HttpOnly: true,
-	})
-	w.WriteHeader(http.StatusOK)
-}
-
-// RefreshSession handles requests to refresh a session token.
-func (a API) RefreshSession(w http.ResponseWriter, r *http.Request) {
-	// Get our session cookie if we have one
-	cookie, err := r.Cookie("session_token")
-	if err != nil {
-		if err == http.ErrNoCookie {
-			w.WriteHeader(http.StatusUnauthorized)
-			return
-		}
-
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	// Get our stored session
-	token := cookie.Value
-	session, err := a.db.GetSession(token)
-	if err != nil {
-		http.Error(w, dbError, http.StatusInternalServerError)
-		return
-	}
-
-	// Check if we have a session
-	if session == nil {
-		w.WriteHeader(http.StatusUnauthorized)
-		return
-	}
-
-	// Check if the existing session has expired
-	if session.Expires.Before(time.Now()) {
-		w.WriteHeader(http.StatusUnauthorized)
-		return
-	}
-
-	// Update the session to be valid for another 5 mins
-	session.Expires = time.Now().Add(300 * time.Second).UTC()
-	if err = a.db.UpdateSession(session); err != nil {
-		http.Error(w, dbError, http.StatusInternalServerError)
-		return
-	}
-
-	// Re-set the session cookie
-	http.SetCookie(w, &http.Cookie{
-		Name:    "session_token",
-		Value:   session.Token,
-		Expires: session.Expires,
+		Secure:   true,
 	})
 	w.WriteHeader(http.StatusOK)
 }

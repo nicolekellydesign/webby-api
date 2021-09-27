@@ -4,6 +4,12 @@ import (
 	"github.com/nicolekellydesign/webby-api/entities"
 )
 
+// CheckSessionResponse is sent when a client is trying to check
+// if they have a valid session.
+type CheckSessionResponse struct {
+	Valid bool `json:"valid"`
+}
+
 // GalleryResponse is sent when a client requests all of the
 // gallery items from the database.
 type GalleryResponse struct {

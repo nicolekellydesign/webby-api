@@ -30,9 +30,9 @@ func (a API) Routes() http.Handler {
 	r.Get("/photos", a.GetPhotos)
 	r.Get("/gallery", a.GetGalleryItems)
 
+	r.Get("/check", a.CheckSession)
 	r.Post("/login", a.PerformLogin)
 	r.Post("/logout", a.PerformLogout)
-	r.Post("/refresh", a.RefreshSession)
 
 	r.Mount("/admin", a.adminRouter())
 
@@ -99,14 +99,17 @@ func (a API) adminOnly(next http.Handler) http.Handler {
 
 		// Check if the session has expired.
 		// If it has expired, remove it from the database.
-		if time.Now().After(session.Expires) {
-			if err = a.db.RemoveSession(token); err != nil {
-				http.Error(w, dbError, http.StatusInternalServerError)
+		if session.MaxAge > 0 {
+			expires := session.Created.Add(time.Duration(session.MaxAge) * time.Second)
+			if time.Now().After(expires) {
+				if err = a.db.RemoveSession(token); err != nil {
+					http.Error(w, dbError, http.StatusInternalServerError)
+					return
+				}
+
+				http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 				return
 			}
-
-			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
-			return
 		}
 
 		next.ServeHTTP(w, r)
