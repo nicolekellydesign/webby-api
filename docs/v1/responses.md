@@ -2,6 +2,16 @@
 
 This documents all of the JSON responses that API routes respond with.
 
+## Check
+
+This is returned when a client sends a request to check if a connection has a valid login session.
+
+```json
+{
+  "valid": bool
+}
+```
+
 ## Gallery
 
 This is returned when a client sends an API request to get all portfolio gallery items.

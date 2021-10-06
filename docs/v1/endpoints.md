@@ -4,17 +4,21 @@ All endpoints for the V1 API are inside the `/api/v1` route. So for example, the
 
 ## Public Routes
 
-These routes can be used by anyone, though the logout and refresh endpoints need a valid session. They aren't considered admin endpoints, they simply need a valid session to make any sense.
+These routes can be used by anyone, though the logout endpoint needs a valid session. It's not considered an admin endpoint, it simply needs a valid session to make any sense.
 
 ### Session Endpoints
 
 These endpoints are used for session management.
 
+#### `/check`: GET
+
+Endpoint to check if a connection has a valid login session. See the responses documentation for the returned object.
+
 #### `/login`: POST
 
 Endpoint to log a user in. If the username and password match what's in the database, a cookie will be set with a session token to be used for all further admin requests.
 
-Each session is only valid for 5 minutes, unless the `extended` flag is set in the JSON request. Sessions may be refreshed as long as the session is still valid. Refreshing a session will extend the session by another 5 minutes.
+Each session is only valid for the current browser session, unless the `extended` flag is set in the JSON request.
 
 If `extended` is set to `true` in the JSON request, the session will be valid for 30 days. This key is optional and may be omitted from the request.
 
@@ -29,10 +33,6 @@ If `extended` is set to `true` in the JSON request, the session will be valid fo
 #### `/logout`: POST
 
 Endpoint to log a user out. This requires a valid session to work, which should be pretty self-explanatory.
-
-#### `/refresh`: POST
-
-Endpoint to refresh an existing session. If the request has a valid session cookie, the session will be extended 5 minutes from the refresh request.
 
 ### Other endpoints
 
