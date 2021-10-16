@@ -2,12 +2,6 @@ package v1
 
 import "github.com/nicolekellydesign/webby-api/entities"
 
-// AddPhotoRequest holds the token and file name of a photo to add
-// to the database.
-type AddPhotoRequest struct {
-	Filename string `json:"filename"`
-}
-
 // AddGalleryItemRequest holds the token and gallery item to add to the
 // database.
 type AddGalleryItemRequest struct {

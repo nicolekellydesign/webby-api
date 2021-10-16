@@ -11,15 +11,17 @@ import (
 )
 
 const (
-	envUserKey     = "WEBBY_DB_USER"
-	envPasswordKey = "WEBBY_DB_PASSWORD"
-	envNameKey     = "WEBBY_DB_NAME"
+	envUserKey      = "WEBBY_DB_USER"
+	envPasswordKey  = "WEBBY_DB_PASSWORD"
+	envNameKey      = "WEBBY_DB_NAME"
+	envUploadDirKey = "WEBBY_UPLOAD_DIR"
 )
 
 var (
 	dbUser     string
 	dbPassword string
 	dbName     string
+	uploadDir  string
 
 	log *waterlog.WaterLog
 )
@@ -54,6 +56,11 @@ func init() {
 	}
 
 	dbName, found = os.LookupEnv(envNameKey)
+	if !found {
+		log.Fatalf("required environment variable '%s' not set", envNameKey)
+	}
+
+	uploadDir, found = os.LookupEnv(envUploadDirKey)
 	if !found {
 		log.Fatalf("required environment variable '%s' not set", envNameKey)
 	}

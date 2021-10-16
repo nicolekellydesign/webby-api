@@ -90,7 +90,7 @@ func ServeFunc(root *cmd.Root, c *cmd.Sub) {
 
 	// Start our API endpoint listener
 	log.Infoln("Starting the API endpoint listener")
-	server := server.New(5000, db)
+	server := server.New(5000, db, log, uploadDir)
 
 	go server.Serve()
 	log.Infoln("Now listening on 'localhost:5000'")

@@ -97,13 +97,7 @@ These routes are for managing pictures in the photography gallery.
 
 #### `/photos`: POST
 
-Add a new photo to the photography gallery from a JSON body.
-
-```json
-{
-  "filename": string
-}
-```
+Add a new photo to the photography gallery. This endpoint takes a `multipart/form-data` with the image set to the key `image`.
 
 #### `/photos/:fileName`: DELETE
 

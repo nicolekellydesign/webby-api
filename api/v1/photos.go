@@ -2,7 +2,10 @@ package v1
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -12,16 +15,36 @@ import (
 //
 // It requires a valid auth token.
 func (a API) AddPhoto(w http.ResponseWriter, r *http.Request) {
-	defer r.Body.Close()
-
-	var req AddPhotoRequest
-	decoder := json.NewDecoder(r.Body)
-	if err := decoder.Decode(&req); err != nil {
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+	if err := r.ParseMultipartForm(8 * 1024 * 1024); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		a.log.Errorf("error parsing multipart form: %s\n", err.Error())
 		return
 	}
 
-	if err := a.db.AddPhoto(req.Filename); err != nil {
+	file, header, err := r.FormFile("image")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		a.log.Errorf("error getting file from form: %s\n", err.Error())
+		return
+	}
+	defer file.Close()
+
+	outPath := filepath.Join(a.uploadDir, header.Filename)
+	out, err := os.Create(outPath)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		a.log.Errorf("error creating new image file: %s\n", err.Error())
+		return
+	}
+	defer out.Close()
+
+	if _, err := io.Copy(out, file); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		a.log.Errorf("error copying to file: %s\n", err.Error())
+		return
+	}
+
+	if err := a.db.AddPhoto(header.Filename); err != nil {
 		http.Error(w, dbError, http.StatusInternalServerError)
 		return
 	}

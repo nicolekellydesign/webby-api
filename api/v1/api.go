@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/DataDrake/waterlog"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/nicolekellydesign/webby-api/database"
@@ -13,13 +14,17 @@ const dbError = "internal database error"
 
 // API is our v1 API that serves and handles endpoints.
 type API struct {
-	db *database.DB
+	db        *database.DB
+	log       *waterlog.WaterLog
+	uploadDir string
 }
 
 // NewAPI creates a new v1 API.
-func NewAPI(db *database.DB) *API {
+func NewAPI(db *database.DB, log *waterlog.WaterLog, uploadDir string) *API {
 	return &API{
 		db,
+		log,
+		uploadDir,
 	}
 }
 
@@ -43,7 +48,7 @@ func (a API) Routes() http.Handler {
 func (a API) adminRouter() http.Handler {
 	r := chi.NewRouter()
 	r.Use(a.adminOnly)
-	r.Use(middleware.AllowContentType("application/json"))
+	r.Use(middleware.AllowContentType("application/json", "multipart/form-data"))
 
 	r.Route("/gallery", func(r chi.Router) {
 		r.Post("/", a.AddGalleryItem)
