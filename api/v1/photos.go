@@ -81,5 +81,12 @@ func (a API) RemovePhoto(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	path := filepath.Join(a.uploadDir, fileName)
+	if err := os.Remove(path); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		a.log.Errorf("error removing image: %s\n", err.Error())
+		return
+	}
+
 	w.WriteHeader(200)
 }
