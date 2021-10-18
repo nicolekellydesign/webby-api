@@ -61,7 +61,7 @@ func (a API) GetPhotos(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Send back the response
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
 	encoder := json.NewEncoder(w)
