@@ -30,19 +30,16 @@ var tables = []string{
 
 	`CREATE TABLE gallery_items (
 		id TEXT UNIQUE NOT NULL PRIMARY KEY,
-		title_line_1 TEXT NOT NULL,
-		title_line_2 TEXT NOT NULL,
-		thumbnail_location TEXT NOT NULL,
-		thumbnail_caption TEXT NOT NULL
-	);`,
-
-	`CREATE TABLE slides (
-		id SERIAL PRIMARY KEY,
-		gallery_id TEXT NOT NULL,
-		name TEXT UNIQUE NOT NULL,
 		title TEXT NOT NULL,
 		caption TEXT NOT NULL,
-		location TEXT NOT NULL,
+		project_info TEXT NOT NULL,
+		thumbnail TEXT NOT NULL,
+	);`,
+
+	`CREATE TABLE project_images (
+		id SERIAL PRIMARY KEY,
+		gallery_id TEXT UNIQUE NOT NULL,
+		file_name VARCHAR(255) NOT NULL,
 		CONSTRAINT fk_gallery
 			FOREIGN KEY(gallery_id)
 			REFERENCES gallery_items(id)
@@ -150,11 +147,11 @@ func (db DB) AddGalleryItem(item entities.GalleryItem) error {
 
 	sql := `INSERT INTO gallery_items (
 		id,
-		title_line_1,
-		title_line_2,
-		thumbnail_location,
-		thumbnail_caption
-	) VALUES (:id, :title_line_1, :title_line_2, :thumbnail_location, :thumbnail_caption);`
+		title,
+		caption,
+		project_info,
+		thumbnail
+	) VALUES (:id, :title, :caption, :project_info, :thumbnail);`
 
 	tx.NamedExec(sql, item)
 
@@ -167,38 +164,33 @@ func (db DB) AddGalleryItem(item entities.GalleryItem) error {
 }
 
 // GetGalleryItems returns all gallery items from the database.
-// This makes two requests: one to get the items, and another to
-// get all of the slides for each item.
 func (db DB) GetGalleryItems() ([]*entities.GalleryItem, error) {
 	items := make([]*entities.GalleryItem, 0)
 
 	query := `SELECT
 		id,
-		title_line_1,
-		title_line_2,
-		thumbnail_location,
-		thumbnail_caption
+		title,
+		caption,
+		project_info,
+		thumbnail
 	FROM gallery_items;`
 
 	if err := db.db.Select(&items, query); err != nil {
 		return nil, err
 	}
 
-	// Get the slides for each gallery item
+	// Get the project images for each gallery item
 	for _, item := range items {
-		slides := make([]*entities.Slide, 0)
+		images := make([]string, 0)
 		query := `SELECT
-			gallery_id,
-			title,
-			caption,
-			location
-		FROM slides WHERE gallery_id=$1;`
+			file_name
+		FROM project_images WHERE gallery_id=$1;`
 
-		if err := db.db.Select(&slides, query, item.Name); err != nil {
+		if err := db.db.Select(&images, query, item.Name); err != nil {
 			continue
 		}
 
-		item.Slides = slides
+		item.Images = images
 	}
 
 	return items, nil
@@ -217,25 +209,11 @@ func (db DB) RemoveGalleryItem(name string) error {
 	return nil
 }
 
-// AddSlide inserts a new slide into the database.
-func (db DB) AddSlide(slide entities.Slide) error {
+// Add ProjectImage inserts a file name for an image in a project to the database.
+func (db DB) AddProjectImage(galleryID, filename string) error {
 	tx := db.db.MustBegin()
+	tx.MustExec("INSERT INTO project_images (gallery_id, file_name) VALUES ($1, $2);", galleryID, filename)
 
-	sql := `INSERT INTO slides (
-		gallery_id,
-		name,
-		title,
-		caption,
-		location
-	) VALUES (
-		:gallery_id,
-		:name,
-		:title,
-		:caption,
-		:location
-	);`
-
-	tx.NamedExec(sql, slide)
 	if err := tx.Commit(); err != nil {
 		tx.Rollback()
 		return err
@@ -244,10 +222,10 @@ func (db DB) AddSlide(slide entities.Slide) error {
 	return nil
 }
 
-// RemoveSlide deletes a slide from the database.
-func (db DB) RemoveSlide(galleryID, name string) error {
+// RemoveProjectImage deletes a project image entry from the database.
+func (db DB) RemoveProjectImage(galleryID, filename string) error {
 	tx := db.db.MustBegin()
-	tx.MustExec("DELETE FROM slides WHERE gallery_id=$1 AND name=$2;", galleryID, name)
+	tx.MustExec("DELETE FROM project_images WHERE gallery_id=$1 AND file_name=$2;", galleryID, filename)
 
 	if err := tx.Commit(); err != nil {
 		tx.Rollback()

@@ -56,8 +56,8 @@ func (a API) adminRouter() http.Handler {
 		r.Route("/{id}", func(r chi.Router) {
 			r.Delete("/", a.RemoveGalleryItem)
 
-			r.Post("/slides", a.AddSlide)
-			r.Delete("/slides/{name}", a.RemoveSlide)
+			r.Post("/image", a.AddImage)
+			r.Delete("/image/{name}", a.RemoveProjectImage)
 		})
 	})
 

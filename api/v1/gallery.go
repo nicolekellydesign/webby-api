@@ -2,26 +2,59 @@ package v1
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/nicolekellydesign/webby-api/entities"
 )
 
 // AddGalleryItem handles a request to add a new gallery item.
 //
 // Requires a valid auth token.
 func (a API) AddGalleryItem(w http.ResponseWriter, r *http.Request) {
-	defer r.Body.Close()
-
-	var req AddGalleryItemRequest
-	decoder := json.NewDecoder(r.Body)
-	if err := decoder.Decode(&req); err != nil {
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+	if err := r.ParseMultipartForm(8 * 1024 * 1024); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		a.log.Errorf("error parsing multipart form: %s\n", err.Error())
 		return
 	}
 
-	if err := a.db.AddGalleryItem(req.Item); err != nil {
+	file, header, err := r.FormFile("thumbnail")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		a.log.Errorf("error getting file from form: %s\n", err.Error())
+		return
+	}
+	defer file.Close()
+
+	outPath := filepath.Join(a.uploadDir, header.Filename)
+	out, err := os.Create(outPath)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		a.log.Errorf("error creating new image file: %s\n", err.Error())
+		return
+	}
+	defer out.Close()
+
+	if _, err := io.Copy(out, file); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		a.log.Errorf("error copying to file: %s\n", err.Error())
+		return
+	}
+
+	galleryItem := entities.GalleryItem{
+		Name:        r.FormValue("name"),
+		Title:       r.FormValue("title"),
+		Caption:     r.FormValue("caption"),
+		ProjectInfo: r.FormValue("project_info"),
+		Thumbnail:   header.Filename,
+	}
+
+	if err := a.db.AddGalleryItem(galleryItem); err != nil {
 		http.Error(w, dbError, http.StatusInternalServerError)
+		a.log.Errorf("error adding gallery item to database: %s\n", err.Error())
 		return
 	}
 
@@ -60,37 +93,61 @@ func (a API) RemoveGalleryItem(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(200)
 }
 
-// AddSlide handles a request to add a new gallery slide.
-//
-// Requires a valid auth token.
-func (a API) AddSlide(w http.ResponseWriter, r *http.Request) {
-	defer r.Body.Close()
-
-	var req AddSlideRequest
-	decoder := json.NewDecoder(r.Body)
-	if err := decoder.Decode(&req); err != nil {
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+func (a API) AddImage(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseMultipartForm(8 * 1024 * 1024); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		a.log.Errorf("error parsing multipart form: %s\n", err.Error())
 		return
 	}
 
-	id := chi.URLParam(r, "id")
-	req.Slide.GalleryID = id
-	if err := a.db.AddSlide(req.Slide); err != nil {
+	file, header, err := r.FormFile("image")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		a.log.Errorf("error getting file from form: %s\n", err.Error())
+		return
+	}
+	defer file.Close()
+
+	outPath := filepath.Join(a.uploadDir, header.Filename)
+	out, err := os.Create(outPath)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		a.log.Errorf("error creating new image file: %s\n", err.Error())
+		return
+	}
+	defer out.Close()
+
+	if _, err := io.Copy(out, file); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		a.log.Errorf("error copying to file: %s\n", err.Error())
+		return
+	}
+
+	if err := a.db.AddProjectImage(r.FormValue("gallery_id"), header.Filename); err != nil {
 		http.Error(w, dbError, http.StatusInternalServerError)
+		a.log.Errorf("error adding project image to database: %s\n", err.Error())
 		return
 	}
 
 	w.WriteHeader(200)
 }
 
-// RemoveSlide handles a request to remove a gallery slide.
-//
-// Requires a valid auth token.
-func (a API) RemoveSlide(w http.ResponseWriter, r *http.Request) {
-	id := chi.URLParam(r, "id")
-	name := chi.URLParam(r, "name")
-	if err := a.db.RemoveSlide(id, name); err != nil {
+// RemoveProjectImage deletes an image for a portfolio project and removes
+// it from the database.
+func (a API) RemoveProjectImage(w http.ResponseWriter, r *http.Request) {
+	galleryID := chi.URLParam(r, "id")
+	fileName := chi.URLParam(r, "name")
+
+	if err := a.db.RemoveProjectImage(galleryID, fileName); err != nil {
 		http.Error(w, dbError, http.StatusInternalServerError)
+		a.log.Errorf("error removing project image from database: %s\n", err.Error())
+		return
+	}
+
+	path := filepath.Join(a.uploadDir, fileName)
+	if err := os.Remove(path); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		a.log.Errorf("error removing project image: %s\n", err.Error())
 		return
 	}
 
