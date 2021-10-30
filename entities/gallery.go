@@ -47,7 +47,7 @@ func (s *NullString) Scan(value interface{}) error {
 	if reflect.TypeOf(value) == nil {
 		*s = NullString{str.String, false}
 	} else {
-		*s = NullString{s.String, true}
+		*s = NullString{str.String, true}
 	}
 
 	return nil
