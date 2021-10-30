@@ -21,6 +21,8 @@ func (a API) AddGalleryItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	name := r.FormValue("name")
+
 	file, header, err := r.FormFile("thumbnail")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -29,7 +31,8 @@ func (a API) AddGalleryItem(w http.ResponseWriter, r *http.Request) {
 	}
 	defer file.Close()
 
-	outPath := filepath.Join(a.uploadDir, header.Filename)
+	fileName := name + "-thumb" + filepath.Ext(header.Filename)
+	outPath := filepath.Join(a.uploadDir, fileName)
 	out, err := os.Create(outPath)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -44,17 +47,103 @@ func (a API) AddGalleryItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	embedURL := r.FormValue("embed_url")
+
 	galleryItem := entities.GalleryItem{
-		Name:        r.FormValue("name"),
+		Name:        name,
 		Title:       r.FormValue("title"),
 		Caption:     r.FormValue("caption"),
 		ProjectInfo: r.FormValue("project_info"),
-		Thumbnail:   header.Filename,
+		Thumbnail:   fileName,
+		EmbedURL: entities.NullString{
+			String: embedURL,
+			Valid:  embedURL != "",
+		},
 	}
 
 	if err := a.db.AddGalleryItem(galleryItem); err != nil {
 		http.Error(w, dbError, http.StatusInternalServerError)
 		a.log.Errorf("error adding gallery item to database: %s\n", err.Error())
+		return
+	}
+
+	w.WriteHeader(200)
+}
+
+// ChangeThumbnail handles requests to change a thumbnail for a project.
+func (a API) ChangeThumbnail(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+
+	if err := r.ParseMultipartForm(8 * 1024 * 1024); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		a.log.Errorf("error parsing multipart form: %s\n", err.Error())
+		return
+	}
+
+	file, header, err := r.FormFile("thumbnail")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		a.log.Errorf("error getting file from form: %s\n", err.Error())
+		return
+	}
+	defer file.Close()
+
+	fileName := id + "-thumb" + filepath.Ext(header.Filename)
+	outPath := filepath.Join(a.uploadDir, fileName)
+	out, err := os.Create(outPath)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		a.log.Errorf("error creating new image file: %s\n", err.Error())
+		return
+	}
+	defer out.Close()
+
+	if _, err := io.Copy(out, file); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		a.log.Errorf("error copying to file: %s\n", err.Error())
+		return
+	}
+
+	if err := a.db.ChangeProjectThumbnail(id, fileName); err != nil {
+		http.Error(w, dbError, http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(200)
+}
+
+// GetProject handles a request to get a portfolio project from the database.
+func (a API) GetProject(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "name")
+
+	ret, err := a.db.GetProject(id)
+	if err != nil {
+		http.Error(w, dbError, http.StatusInternalServerError)
+		return
+	}
+
+	// Send back the response
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(200)
+
+	encoder := json.NewEncoder(w)
+	encoder.Encode(ret)
+}
+
+// UpdateProject handles requests to update a portfolio project.
+func (a API) UpdateProject(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+
+	decoder := json.NewDecoder(r.Body)
+	var project entities.GalleryItem
+	if err := decoder.Decode(&project); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		a.log.Errorf("error decoding JSON body in project update request: %s\n", err.Error())
+		return
+	}
+
+	if err := a.db.UpdateProject(&project); err != nil {
+		http.Error(w, dbError, http.StatusInternalServerError)
 		return
 	}
 
@@ -94,6 +183,8 @@ func (a API) RemoveGalleryItem(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a API) AddImage(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+
 	if err := r.ParseMultipartForm(8 * 1024 * 1024); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		a.log.Errorf("error parsing multipart form: %s\n", err.Error())
@@ -123,7 +214,7 @@ func (a API) AddImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := a.db.AddProjectImage(r.FormValue("gallery_id"), header.Filename); err != nil {
+	if err := a.db.AddProjectImage(id, header.Filename); err != nil {
 		http.Error(w, dbError, http.StatusInternalServerError)
 		a.log.Errorf("error adding project image to database: %s\n", err.Error())
 		return

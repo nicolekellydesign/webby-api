@@ -34,6 +34,7 @@ func (a API) Routes() http.Handler {
 
 	r.Get("/photos", a.GetPhotos)
 	r.Get("/gallery", a.GetGalleryItems)
+	r.Get("/gallery/{name}", a.GetProject)
 
 	r.Get("/check", a.CheckSession)
 	r.Post("/login", a.PerformLogin)
@@ -55,6 +56,9 @@ func (a API) adminRouter() http.Handler {
 
 		r.Route("/{id}", func(r chi.Router) {
 			r.Delete("/", a.RemoveGalleryItem)
+			r.Put("/", a.UpdateProject)
+
+			r.Patch("/thumbnail", a.ChangeThumbnail)
 
 			r.Post("/image", a.AddImage)
 			r.Delete("/image/{name}", a.RemoveProjectImage)

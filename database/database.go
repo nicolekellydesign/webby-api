@@ -34,6 +34,7 @@ var tables = []string{
 		caption TEXT NOT NULL,
 		project_info TEXT NOT NULL,
 		thumbnail TEXT NOT NULL,
+		embed_url TEXT
 	);`,
 
 	`CREATE TABLE project_images (
@@ -150,11 +151,73 @@ func (db DB) AddGalleryItem(item entities.GalleryItem) error {
 		title,
 		caption,
 		project_info,
-		thumbnail
-	) VALUES (:id, :title, :caption, :project_info, :thumbnail);`
+		thumbnail,
+		embed_url
+	) VALUES ($1, $2, $3, $4, $5, $6);`
 
-	tx.NamedExec(sql, item)
+	tx.MustExec(sql, item.Name, item.Title, item.Caption, item.ProjectInfo, item.Thumbnail, item.EmbedURL.String)
 
+	if err := tx.Commit(); err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	return nil
+}
+
+// ChangeProjectThumbnail sets a new thumbnail for a project.
+func (db DB) ChangeProjectThumbnail(name, newThumb string) error {
+	tx := db.db.MustBegin()
+	tx.MustExec("UPDATE gallery_items SET thumbnail=$1 WHERE id=$2;", newThumb, name)
+
+	if err := tx.Commit(); err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	return nil
+}
+
+// GetProject retrieves a project from the database with the given name.
+func (db DB) GetProject(name string) (*entities.GalleryItem, error) {
+	var project entities.GalleryItem
+
+	query := "SELECT title, caption, project_info, thumbnail, embed_url FROM gallery_items WHERE id=$1;"
+	if err := db.db.Get(&project, query, name); err != nil {
+		return nil, err
+	}
+
+	project.Name = name
+
+	images := make([]string, 0)
+	query = "SELECT file_name FROM project_images WHERE gallery_id=$1;"
+
+	if err := db.db.Select(&images, query, name); err != nil {
+		return nil, err
+	}
+
+	project.Images = images
+	return &project, nil
+}
+
+// UpdateProject sets the title, caption, project info, and embed URL fields for a project
+// with the same name in the database.
+func (db DB) UpdateProject(project *entities.GalleryItem) error {
+	tx := db.db.MustBegin()
+
+	sql := `
+	UPDATE
+		gallery_items
+	SET
+		title = $1,
+		caption = $2,
+		project_info = $3,
+		embed_url = $4
+	WHERE
+		id = $5;
+	`
+
+	tx.MustExec(sql, project.Title, project.Caption, project.ProjectInfo, project.EmbedURL.String, project.Name)
 	if err := tx.Commit(); err != nil {
 		tx.Rollback()
 		return err
@@ -172,7 +235,8 @@ func (db DB) GetGalleryItems() ([]*entities.GalleryItem, error) {
 		title,
 		caption,
 		project_info,
-		thumbnail
+		thumbnail,
+		embed_url
 	FROM gallery_items;`
 
 	if err := db.db.Select(&items, query); err != nil {
