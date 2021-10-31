@@ -39,7 +39,7 @@ var tables = []string{
 
 	`CREATE TABLE project_images (
 		id SERIAL PRIMARY KEY,
-		gallery_id TEXT UNIQUE NOT NULL,
+		gallery_id TEXT NOT NULL,
 		file_name VARCHAR(255) NOT NULL,
 		CONSTRAINT fk_gallery
 			FOREIGN KEY(gallery_id)
