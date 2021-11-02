@@ -32,7 +32,7 @@ func (a API) AddGalleryItem(w http.ResponseWriter, r *http.Request) {
 	defer file.Close()
 
 	fileName := name + "-thumb" + filepath.Ext(header.Filename)
-	outPath := filepath.Join(a.uploadDir, fileName)
+	outPath := filepath.Join(a.imageDir, fileName)
 	out, err := os.Create(outPath)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -89,7 +89,7 @@ func (a API) ChangeThumbnail(w http.ResponseWriter, r *http.Request) {
 	defer file.Close()
 
 	fileName := id + "-thumb" + filepath.Ext(header.Filename)
-	outPath := filepath.Join(a.uploadDir, fileName)
+	outPath := filepath.Join(a.imageDir, fileName)
 	out, err := os.Create(outPath)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -199,7 +199,7 @@ func (a API) AddImage(w http.ResponseWriter, r *http.Request) {
 	}
 	defer file.Close()
 
-	outPath := filepath.Join(a.uploadDir, header.Filename)
+	outPath := filepath.Join(a.imageDir, header.Filename)
 	out, err := os.Create(outPath)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -235,7 +235,7 @@ func (a API) RemoveProjectImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	path := filepath.Join(a.uploadDir, fileName)
+	path := filepath.Join(a.imageDir, fileName)
 	if err := os.Remove(path); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		a.log.Errorf("error removing project image: %s\n", err.Error())

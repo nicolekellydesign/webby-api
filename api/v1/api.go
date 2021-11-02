@@ -2,6 +2,7 @@ package v1
 
 import (
 	"net/http"
+	"path/filepath"
 	"time"
 
 	"github.com/DataDrake/waterlog"
@@ -14,17 +15,19 @@ const dbError = "internal database error"
 
 // API is our v1 API that serves and handles endpoints.
 type API struct {
-	db        *database.DB
-	log       *waterlog.WaterLog
-	uploadDir string
+	db           *database.DB
+	log          *waterlog.WaterLog
+	imageDir     string
+	resourcesDir string
 }
 
 // NewAPI creates a new v1 API.
-func NewAPI(db *database.DB, log *waterlog.WaterLog, uploadDir string) *API {
+func NewAPI(db *database.DB, log *waterlog.WaterLog, rootDir string) *API {
 	return &API{
 		db,
 		log,
-		uploadDir,
+		filepath.Join(rootDir, "images"),
+		filepath.Join(rootDir, "resources"),
 	}
 }
 
@@ -32,6 +35,7 @@ func NewAPI(db *database.DB, log *waterlog.WaterLog, uploadDir string) *API {
 func (a API) Routes() http.Handler {
 	r := chi.NewRouter()
 
+	r.Get("/about", a.GetAbout)
 	r.Get("/photos", a.GetPhotos)
 	r.Get("/gallery", a.GetGalleryItems)
 	r.Get("/gallery/{name}", a.GetProject)
@@ -50,6 +54,12 @@ func (a API) adminRouter() http.Handler {
 	r := chi.NewRouter()
 	r.Use(a.adminOnly)
 	r.Use(middleware.AllowContentType("application/json", "multipart/form-data"))
+
+	r.Route("/about", func(r chi.Router) {
+		r.Put("/", a.UpdateAbout)
+		r.Patch("/portrait", a.ChangePortrait)
+		r.Patch("/resume", a.ChangeResume)
+	})
 
 	r.Route("/gallery", func(r chi.Router) {
 		r.Post("/", a.AddGalleryItem)

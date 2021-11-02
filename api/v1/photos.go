@@ -29,7 +29,7 @@ func (a API) AddPhoto(w http.ResponseWriter, r *http.Request) {
 	}
 	defer file.Close()
 
-	outPath := filepath.Join(a.uploadDir, header.Filename)
+	outPath := filepath.Join(a.imageDir, header.Filename)
 	out, err := os.Create(outPath)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -81,7 +81,7 @@ func (a API) RemovePhoto(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	path := filepath.Join(a.uploadDir, fileName)
+	path := filepath.Join(a.imageDir, fileName)
 	if err := os.Remove(path); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		a.log.Errorf("error removing image: %s\n", err.Error())
