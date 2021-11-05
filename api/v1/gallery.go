@@ -223,23 +223,34 @@ func (a API) AddImage(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(200)
 }
 
-// RemoveProjectImage deletes an image for a portfolio project and removes
-// it from the database.
-func (a API) RemoveProjectImage(w http.ResponseWriter, r *http.Request) {
+// RemoveProjectImages deletes images for a portfolio project and removes
+// them from the database.
+func (a API) RemoveProjectImages(w http.ResponseWriter, r *http.Request) {
 	galleryID := chi.URLParam(r, "id")
-	fileName := chi.URLParam(r, "name")
 
-	if err := a.db.RemoveProjectImage(galleryID, fileName); err != nil {
-		http.Error(w, dbError, http.StatusInternalServerError)
-		a.log.Errorf("error removing project image from database: %s\n", err.Error())
+	defer r.Body.Close()
+
+	var files []string
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&files); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		a.log.Errorf("error decoding image files to remove: %s\n", err.Error())
 		return
 	}
 
-	path := filepath.Join(a.imageDir, fileName)
-	if err := os.Remove(path); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		a.log.Errorf("error removing project image: %s\n", err.Error())
+	if err := a.db.RemoveProjectImages(galleryID, files); err != nil {
+		http.Error(w, dbError, http.StatusInternalServerError)
+		a.log.Errorf("error removing project images from database: %s\n", err.Error())
 		return
+	}
+
+	for _, file := range files {
+		path := filepath.Join(a.imageDir, file)
+		if err := os.Remove(path); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			a.log.Errorf("error deleting project image: %s\n", err.Error())
+			return
+		}
 	}
 
 	w.WriteHeader(200)

@@ -71,7 +71,7 @@ func (a API) adminRouter() http.Handler {
 			r.Patch("/thumbnail", a.ChangeThumbnail)
 
 			r.Post("/image", a.AddImage)
-			r.Delete("/image/{name}", a.RemoveProjectImage)
+			r.Delete("/images", a.RemoveProjectImages)
 		})
 	})
 

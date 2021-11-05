@@ -3,6 +3,7 @@ package database
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 
 	// This is commented because I guess that's all sqlx needs
 	_ "github.com/jackc/pgx/v4/stdlib"
@@ -286,10 +287,27 @@ func (db DB) AddProjectImage(galleryID, filename string) error {
 	return nil
 }
 
-// RemoveProjectImage deletes a project image entry from the database.
-func (db DB) RemoveProjectImage(galleryID, filename string) error {
+// RemoveProjectImages deletes project images from the database.
+func (db DB) RemoveProjectImages(galleryID string, files []string) error {
+	var sb strings.Builder
+	sb.WriteString("DELETE FROM project_images WHERE gallery_id=$1 AND file_name IN (")
+	for i := range files {
+		if i == len(files)-1 {
+			sb.WriteString(fmt.Sprintf("$%d", i+2))
+		} else {
+			sb.WriteString(fmt.Sprintf("$%d,", i+2))
+		}
+	}
+	sb.WriteString(");")
+
+	var args []interface{}
+	args = append(args, galleryID)
+	for _, file := range files {
+		args = append(args, file)
+	}
+
 	tx := db.db.MustBegin()
-	tx.MustExec("DELETE FROM project_images WHERE gallery_id=$1 AND file_name=$2;", galleryID, filename)
+	tx.MustExec(sb.String(), args...)
 
 	if err := tx.Commit(); err != nil {
 		tx.Rollback()
