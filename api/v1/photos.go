@@ -6,8 +6,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-
-	"github.com/go-chi/chi/v5"
 )
 
 // AddPhoto handles a request to add a file name to the
@@ -70,22 +68,33 @@ func (a API) GetPhotos(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// RemovePhoto handles a request to remove a file name from the
+// RemovePhotos handles a request to remove a list of files from the
 // photos database.
 //
 // It requires a valid auth token.
-func (a API) RemovePhoto(w http.ResponseWriter, r *http.Request) {
-	fileName := chi.URLParam(r, "fileName")
-	if err := a.db.RemovePhoto(fileName); err != nil {
+func (a API) RemovePhotos(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+
+	var files []string
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&files); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		a.log.Errorf("error decoding image files to remove: %s\n", err.Error())
+		return
+	}
+
+	if err := a.db.RemovePhotos(files); err != nil {
 		http.Error(w, dbError, http.StatusInternalServerError)
 		return
 	}
 
-	path := filepath.Join(a.imageDir, fileName)
-	if err := os.Remove(path); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		a.log.Errorf("error removing image: %s\n", err.Error())
-		return
+	for _, file := range files {
+		path := filepath.Join(a.imageDir, file)
+		if err := os.Remove(path); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			a.log.Errorf("error removing image: %s\n", err.Error())
+			return
+		}
 	}
 
 	w.WriteHeader(200)

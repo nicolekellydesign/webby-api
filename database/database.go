@@ -129,11 +129,27 @@ func (db DB) GetPhotos() ([]*entities.Photo, error) {
 	return ret, nil
 }
 
-// RemovePhoto deletes a photo with the given file name from
-// the database.
-func (db DB) RemovePhoto(fileName string) error {
+// RemovePhotos removes photos in the list of files from the
+// database.
+func (db DB) RemovePhotos(files []string) error {
+	var sb strings.Builder
+	sb.WriteString("DELETE FROM photos WHERE file_name IN (")
+	for i := range files {
+		if i == len(files)-1 {
+			sb.WriteString(fmt.Sprintf("$%d", i+1))
+		} else {
+			sb.WriteString(fmt.Sprintf("$%d,", i+1))
+		}
+	}
+	sb.WriteString(");")
+
+	var args []interface{}
+	for _, file := range files {
+		args = append(args, file)
+	}
+
 	tx := db.db.MustBegin()
-	tx.MustExec("DELETE FROM photos WHERE file_name=$1;", fileName)
+	tx.MustExec(sb.String(), args...)
 
 	if err := tx.Commit(); err != nil {
 		tx.Rollback()

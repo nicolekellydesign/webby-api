@@ -76,7 +76,7 @@ func (a API) adminRouter() http.Handler {
 	})
 
 	r.Post("/photos", a.AddPhoto)
-	r.Delete("/photos/{fileName}", a.RemovePhoto)
+	r.Delete("/photos", a.RemovePhotos)
 
 	r.Route("/users", func(r chi.Router) {
 		r.Get("/", a.GetUsers)
