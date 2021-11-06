@@ -106,10 +106,13 @@ func (db DB) InitSchema() error {
 	return nil
 }
 
-// AddPhoto inserts a new photo into the database.
-func (db DB) AddPhoto(fileName string) error {
+// AddPhotos inserts new photo image names into the database.
+func (db DB) AddPhotos(files []string) error {
 	tx := db.db.MustBegin()
-	tx.MustExec("INSERT INTO photos (file_name) VALUES ($1);", fileName)
+
+	for _, file := range files {
+		tx.MustExec("INSERT INTO photos (file_name) VALUES ($1);", file)
+	}
 
 	if err := tx.Commit(); err != nil {
 		tx.Rollback()
@@ -290,10 +293,13 @@ func (db DB) RemoveGalleryItem(name string) error {
 	return nil
 }
 
-// Add ProjectImage inserts a file name for an image in a project to the database.
-func (db DB) AddProjectImage(galleryID, filename string) error {
+// Add ProjectImages inserts new image names for a project into the database.
+func (db DB) AddProjectImages(galleryID string, files []string) error {
 	tx := db.db.MustBegin()
-	tx.MustExec("INSERT INTO project_images (gallery_id, file_name) VALUES ($1, $2);", galleryID, filename)
+
+	for _, file := range files {
+		tx.MustExec("INSERT INTO project_images (gallery_id, file_name) VALUES ($1, $2);", galleryID, file)
+	}
 
 	if err := tx.Commit(); err != nil {
 		tx.Rollback()

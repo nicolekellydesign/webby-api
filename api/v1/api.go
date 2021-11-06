@@ -70,12 +70,12 @@ func (a API) adminRouter() http.Handler {
 
 			r.Patch("/thumbnail", a.ChangeThumbnail)
 
-			r.Post("/image", a.AddImage)
+			r.Post("/images", a.AddImages)
 			r.Delete("/images", a.RemoveProjectImages)
 		})
 	})
 
-	r.Post("/photos", a.AddPhoto)
+	r.Post("/photos", a.AddPhotos)
 	r.Delete("/photos", a.RemovePhotos)
 
 	r.Route("/users", func(r chi.Router) {
@@ -83,6 +83,8 @@ func (a API) adminRouter() http.Handler {
 		r.Post("/", a.AddUser)
 		r.Delete("/{id}", a.RemoveUser)
 	})
+
+	r.Post("/upload", a.Upload)
 
 	return r
 }
