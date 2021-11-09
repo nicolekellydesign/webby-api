@@ -27,7 +27,7 @@ func (a API) Upload(w http.ResponseWriter, r *http.Request) {
 
 	// Determine which path the file should be saved to
 	var outPath string
-	if strings.HasPrefix(r.Header.Get("Content-Type"), "image/") {
+	if strings.HasPrefix(header.Header.Get("Content-Type"), "image/") {
 		outPath = filepath.Join(a.imageDir, header.Filename)
 	} else {
 		outPath = filepath.Join(a.resourcesDir, header.Filename)
