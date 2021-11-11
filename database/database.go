@@ -21,7 +21,8 @@ var tables = []string{
 		id SERIAL PRIMARY KEY,
 		user_name TEXT UNIQUE NOT NULL,
 		pwdhash TEXT NOT NULL,
-		protected BOOL NOT NULL
+		protected BOOL NOT NULL,
+		created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 	);`,
 
 	`CREATE TABLE photos (
@@ -356,7 +357,7 @@ func (db DB) AddUser(username, password string, protected bool) error {
 // given ID.
 func (db DB) GetUser(id string) (*entities.User, error) {
 	var user entities.User
-	err := db.db.Get(&user, "SELECT id, user_name, protected FROM users WHERE id=$1;", id)
+	err := db.db.Get(&user, "SELECT id, user_name, protected, created_at FROM users WHERE id=$1;", id)
 	if err != nil {
 		return nil, err
 	}
@@ -367,7 +368,7 @@ func (db DB) GetUser(id string) (*entities.User, error) {
 // GetUsers fetches all of the users from the database.
 func (db DB) GetUsers() ([]*entities.User, error) {
 	ret := make([]*entities.User, 0)
-	if err := db.db.Select(&ret, "SELECT id, user_name, protected FROM users;"); err != nil {
+	if err := db.db.Select(&ret, "SELECT id, user_name, protected, created_at FROM users;"); err != nil {
 		return nil, err
 	}
 
