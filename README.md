@@ -34,6 +34,7 @@ All of the database connection info is retrieved from environment variables, spe
 - WEBBY_DB_USER
 - WEBBY_DB_PASSWORD
 - WEBBY_DB_NAME
+- WEBBY_ROOT
 
 The database schema is created by running `webby-cli init`.
 

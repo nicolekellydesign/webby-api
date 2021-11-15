@@ -2,6 +2,16 @@
 
 This documents all of the JSON responses that API routes respond with.
 
+## About
+
+This is returned when a client requests the about page designer statement.
+
+```json
+{
+  "statement": string,
+}
+```
+
 ## Check
 
 This is returned when a client sends a request to check if a connection has a valid login session.
@@ -16,7 +26,7 @@ This is returned when a client sends a request to check if a connection has a va
 
 This is returned when a client sends an API request to get all portfolio gallery items.
 
-If an item for some reason has no slides, then the item will just have an empty slides array.
+If an item has no images, then the item will just have an empty images array.
 
 If there are no gallery items, an empty array is returned.
 
@@ -25,19 +35,13 @@ If there are no gallery items, an empty array is returned.
   "items": [
     {
       "id": string,
-      "title_line_1": string,
-      "title_line_2": string,
-      "thumbnail_location": string,
-      "thumbnail_caption": string,
-      "slides": [
-        {
-          "gallery_id": string,
-          "name": string,
-          "title": string,
-          "caption": string,
-          "location": string
-        },
-        . . . more slides
+      "title": string,
+      "caption": string,
+      "projectInfo": string,
+      "thumbnail": string,
+      "embedURL": string,
+      "images": [
+        . . . string,
       ]
     },
     . . . more items
@@ -69,17 +73,12 @@ This is returned when a client sends an API request to get all users.
 ```json
 {
   "users": [
+    {
+      "id": number,
+      "username": string,
+      "protected": bool
+    },
     . . . users
   ]
-}
-```
-
-Here is what the returned User struct looks like:
-
-```json
-{
-  "id": number,
-  "username": string,
-  "protected": bool
 }
 ```

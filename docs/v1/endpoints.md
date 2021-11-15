@@ -12,11 +12,11 @@ These endpoints are used for session management.
 
 #### `/check`: GET
 
-Endpoint to check if a connection has a valid login session. See the responses documentation for the returned object.
+Checks if a connection has a valid login session. See the responses documentation for the returned object.
 
 #### `/login`: POST
 
-Endpoint to log a user in. If the username and password match what's in the database, a cookie will be set with a session token to be used for all further admin requests.
+Logs a user in. If the username and password match what's in the database, a cookie will be set with a session token to be used for all further admin requests.
 
 Each session is only valid for the current browser session, unless the `extended` flag is set in the JSON request.
 
@@ -32,17 +32,25 @@ If `extended` is set to `true` in the JSON request, the session will be valid fo
 
 #### `/logout`: POST
 
-Endpoint to log a user out. This requires a valid session to work, which should be pretty self-explanatory.
+Logs a user out. This requires a valid session to work, which should be pretty self-explanatory.
 
 ### Other endpoints
 
+#### `/about`: GET
+
+Gets the designer statement text from the server.
+
 #### `/gallery`: GET
 
-Endpoint to get all stored gallery items. See the responses doc for the structure of the returned JSON object.
+Gets all stored gallery items.
+
+#### `/gallery/:name`: GET
+
+Gets the details for a project with the given name.
 
 #### `/photos`: GET
 
-Endpoint to get all stored photography gallery items. See the responses doc for the structure of the returned JSON object.
+Endpoint to get all stored photography gallery items.
 
 ## Admin Routes
 
@@ -54,17 +62,27 @@ These routes are for managing items and slides in the main portfolio gallery.
 
 #### `/gallery`: POST
 
-Adds a new gallery item from a JSON body.
+Adds a new gallery item to the database with a thumbnail. It expects a multipart-form body with these keys:
+
+```
+name: string
+thumbnail: File
+embed_url: string | undefined
+title: string
+caption: string
+project_info: string
+```
+
+#### `/gallery/:id`: PUT
+
+Updates a project. The values to update are taken from a JSON body with the format:
 
 ```json
 {
-  "item": {
-    "id": string,
-    "title_line_1": string,
-    "title_line_2": string,
-    "thumbnail_caption": string,
-    "thumbnail_location": string
-  }
+  "title": string,
+  "caption": string,
+  "projectInfo": string,
+  "embedURL": string | undefined
 }
 ```
 
@@ -72,24 +90,19 @@ Adds a new gallery item from a JSON body.
 
 Removes a gallery item with the given ID. If no item exists with the ID, HTTP status `404` will be returned.
 
-#### `/gallery/:id/slides`: POST
+#### `/gallery/:id/thumbnail`: PATCH
 
-Adds a new slide to the gallery item with the given ID.
+Updates the thumbnail for a project. The body should be a multipart-form with the image set to the `thumbnail` key.
 
-```json
-{
-  "slide": {
-    "name": string,
-    "title": string,
-    "caption": string,
-    "location": string
-  }
-}
-```
+#### `/gallery/:id/images`: POST
 
-#### `/gallery/:id/slides/:name`: DELETE
+Adds a the given image names to the database, associating them with the project ID. The body should be a JSON array of the file names.
 
-Removes a slide with the given name from the gallery item that has the given ID.
+This doesn't handle the uploading of the images; see the `upload` endpoint.
+
+#### `/gallery/:id/images`: DELETE
+
+Removes images associated with a project from the database and filesystem. The body should be a JSON array of the file names to remove.
 
 ### Photos
 
@@ -97,11 +110,13 @@ These routes are for managing pictures in the photography gallery.
 
 #### `/photos`: POST
 
-Add a new photo to the photography gallery. This endpoint takes a `multipart/form-data` with the image set to the key `image`.
+Add new photos to the photography gallery. The body should be a JSON array of the file names.
 
-#### `/photos/:fileName`: DELETE
+This doesn't handle the uploading of the images; see the `upload` endpoint.
 
-Removes a photo that has the given file name.
+#### `/photos`: DELETE
+
+Removes a list of photos from the database and filesystem. The body should be a JSON array of the file names to remove.
 
 ### Users
 
@@ -125,3 +140,11 @@ Adds a new administrator. The endpoint expects the following JSON body:
 #### `/users/:id`: DELETE
 
 Removes an administrator. An admin cannot delete themselves.
+
+### Upload
+
+#### `/upload`: POST
+
+Upload a file to the server. If the file's MIME type is that of an image, the file will be saved to the `images` subdirectory of the project root. All other files will be saved to the `resources` subdirectory.
+
+The request body should be a multipart-form with the file set to the key `file`.
