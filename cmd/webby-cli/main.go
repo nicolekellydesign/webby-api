@@ -47,22 +47,22 @@ func init() {
 	found := false
 	dbUser, found = os.LookupEnv(envUserKey)
 	if !found {
-		log.Fatalf("required environment variable '%s' not set", envUserKey)
+		log.Fatalf("required environment variable '%s' not set\n", envUserKey)
 	}
 
 	dbPassword, found = os.LookupEnv(envPasswordKey)
 	if !found {
-		log.Fatalf("required environment variable '%s' not set", envPasswordKey)
+		log.Fatalf("required environment variable '%s' not set\n", envPasswordKey)
 	}
 
 	dbName, found = os.LookupEnv(envNameKey)
 	if !found {
-		log.Fatalf("required environment variable '%s' not set", envNameKey)
+		log.Fatalf("required environment variable '%s' not set\n", envNameKey)
 	}
 
 	rootDir, found = os.LookupEnv(envRootKey)
 	if !found {
-		log.Fatalf("required environment variable '%s' not set", envRootKey)
+		log.Fatalf("required environment variable '%s' not set\n", envRootKey)
 	}
 }
 

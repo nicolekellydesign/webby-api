@@ -54,7 +54,7 @@ func ListUsersFunc(root *cmd.Root, c *cmd.Sub) {
 func RemoveUserFunc(root *cmd.Root, c *cmd.Sub) {
 	db, err := database.Connect(dbUser, dbPassword, dbName)
 	if err != nil {
-		log.Fatalf("Unable to connect to the database: %s", err)
+		log.Fatalf("Unable to connect to the database: %s\n", err)
 	}
 
 	args := c.Args.(*RemoveUserArgs)
@@ -70,7 +70,7 @@ func RemoveUserFunc(root *cmd.Root, c *cmd.Sub) {
 func InitFunc(root *cmd.Root, c *cmd.Sub) {
 	db, err := database.Connect(dbUser, dbPassword, dbName)
 	if err != nil {
-		log.Fatalf("Unable to connect to the database: %s", err)
+		log.Fatalf("Unable to connect to the database: %s\n", err)
 	}
 
 	if err = db.InitSchema(); err != nil {
@@ -85,7 +85,7 @@ func ServeFunc(root *cmd.Root, c *cmd.Sub) {
 	// Start our database connection
 	db, err := database.Connect(dbUser, dbPassword, dbName)
 	if err != nil {
-		log.Fatalf("Unable to connect to the database: %s", err)
+		log.Fatalf("Unable to connect to the database: %s\n", err)
 	}
 
 	// Start our API endpoint listener
