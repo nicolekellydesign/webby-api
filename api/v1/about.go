@@ -18,7 +18,7 @@ func (a API) ChangePortrait(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	file, _, err := r.FormFile("image")
+	file, _, err := r.FormFile("file")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		a.log.Errorf("error getting file from form: %s\n", err.Error())
