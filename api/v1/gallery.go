@@ -74,37 +74,17 @@ func (a API) AddGalleryItem(w http.ResponseWriter, r *http.Request) {
 func (a API) ChangeThumbnail(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 
-	if err := r.ParseMultipartForm(8 * 1024 * 1024); err != nil {
+	defer r.Body.Close()
+
+	decoder := json.NewDecoder(r.Body)
+	var req ChangeThumbnailRequest
+	if err := decoder.Decode(&req); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
-		a.log.Errorf("error parsing multipart form: %s\n", err.Error())
+		a.log.Errorf("error decoding JSON body in project update request: %s\n", err.Error())
 		return
 	}
 
-	file, header, err := r.FormFile("thumbnail")
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		a.log.Errorf("error getting file from form: %s\n", err.Error())
-		return
-	}
-	defer file.Close()
-
-	fileName := id + "-thumb" + filepath.Ext(header.Filename)
-	outPath := filepath.Join(a.imageDir, fileName)
-	out, err := os.Create(outPath)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		a.log.Errorf("error creating new image file: %s\n", err.Error())
-		return
-	}
-	defer out.Close()
-
-	if _, err := io.Copy(out, file); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		a.log.Errorf("error copying to file: %s\n", err.Error())
-		return
-	}
-
-	if err := a.db.ChangeProjectThumbnail(id, fileName); err != nil {
+	if err := a.db.ChangeProjectThumbnail(id, req.Thumbnail); err != nil {
 		http.Error(w, dbError, http.StatusInternalServerError)
 		return
 	}

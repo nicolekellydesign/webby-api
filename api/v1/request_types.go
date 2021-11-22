@@ -6,6 +6,12 @@ type AddUserRequest struct {
 	Password string `json:"password"`
 }
 
+// ChangeThumbnailRequest holds the file name of the thumbnail to update a
+// project with.
+type ChangeThumbnailRequest struct {
+	Thumbnail string `json:"thumbnail"`
+}
+
 // LoginRequest is the username and password expected from the login endpoint.
 type LoginRequest struct {
 	Username string `json:"username"`
