@@ -2,7 +2,6 @@ package v1
 
 import (
 	"encoding/json"
-	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -10,101 +9,13 @@ import (
 	"github.com/nicolekellydesign/webby-api/entities"
 )
 
-// ChangePortrait handles requests to change the about page portrait.
-func (a API) ChangePortrait(w http.ResponseWriter, r *http.Request) {
-	if err := r.ParseMultipartForm(8 * 1024 * 1024); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		a.log.Errorf("error parsing multipart form: %s\n", err.Error())
-		return
-	}
-
-	file, _, err := r.FormFile("file")
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		a.log.Errorf("error getting file from form: %s\n", err.Error())
-		return
-	}
-	defer file.Close()
-
-	outPath := filepath.Join(a.imageDir, "about-portrait.jpg")
-	out, err := os.Create(outPath)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		a.log.Errorf("error creating new image file: %s\n", err.Error())
-		return
-	}
-	defer out.Close()
-
-	if _, err := io.Copy(out, file); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		a.log.Errorf("error copying to file: %s\n", err.Error())
-		return
-	}
-
-	w.WriteHeader(200)
-}
-
-// ChangeResume handles requests to change the about page resume.
-func (a API) ChangeResume(w http.ResponseWriter, r *http.Request) {
-	if err := r.ParseMultipartForm(8 * 1024 * 1024); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		a.log.Errorf("error parsing multipart form: %s\n", err.Error())
-		return
-	}
-
-	file, _, err := r.FormFile("resume")
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		a.log.Errorf("error getting file from form: %s\n", err.Error())
-		return
-	}
-	defer file.Close()
-
-	outPath := filepath.Join(a.resourcesDir, "resume.pdf")
-	out, err := os.Create(outPath)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		a.log.Errorf("error creating resume file: %s\n", err.Error())
-		return
-	}
-	defer out.Close()
-
-	if _, err := io.Copy(out, file); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		a.log.Errorf("error copying to file: %s\n", err.Error())
-		return
-	}
-
-	w.WriteHeader(200)
-}
-
 // GetAbout fetches the about page info from a file and sends it to the client.
 func (a API) GetAbout(w http.ResponseWriter, r *http.Request) {
 	// Open about page info file
 	path := filepath.Join(a.resourcesDir, "about-info.json")
-
-	// Check if the file exists
-	if _, err := os.Stat(path); err != nil {
-		if os.IsNotExist(err) {
-			// File hasn't been written yet, so return a blank statement
-			w.Header().Set("Content-Type", "application/json; charset=utf-8")
-			w.WriteHeader(200)
-			encoder := json.NewEncoder(w)
-			encoder.Encode(&entities.About{
-				Statement: "",
-			})
-			return
-		}
-
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		a.log.Errorf("unable to stat about page file: %s\n", err.Error())
-		return
-	}
-
-	// Open the file
-	file, err := os.Open(path)
+	file, err := openOrCreate(path)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		a.log.Errorf("error opening about page file: %s\n", err.Error())
 		return
 	}
@@ -114,7 +25,7 @@ func (a API) GetAbout(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(file)
 	var ret entities.About
 	if err := decoder.Decode(&ret); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		a.log.Errorf("error reading about page file: %s\n", err.Error())
 		return
 	}
@@ -126,14 +37,14 @@ func (a API) GetAbout(w http.ResponseWriter, r *http.Request) {
 	encoder.Encode(ret)
 }
 
-// UpdateAbout writes the information in the request body to a file.
-func (a API) UpdateAbout(w http.ResponseWriter, r *http.Request) {
+// UpdatePortrait updates the about page portrait file name.
+func (a API) UpdatePortrait(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	// Decode from request body
 	decoder := json.NewDecoder(r.Body)
-	var about entities.About
-	if err := decoder.Decode(&about); err != nil {
+	var update entities.About
+	if err := decoder.Decode(&update); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		a.log.Errorf("error decoding JSON body in about page update request: %s\n", err.Error())
 		return
@@ -141,22 +52,169 @@ func (a API) UpdateAbout(w http.ResponseWriter, r *http.Request) {
 
 	// Open about page info file
 	path := filepath.Join(a.resourcesDir, "about-info.json")
-	file, err := os.Create(path)
+	b, err := os.ReadFile(path)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
-		a.log.Errorf("error opening about page file: %s\n", err.Error())
+		a.log.Errorf("error reading about page file: %s\n", err.Error())
 		return
 	}
-	defer file.Close()
+
+	// Decode the file contents
+	var details entities.About
+	if err := json.Unmarshal(b, &details); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		a.log.Errorf("error decoding about page contents: %s\n", err.Error())
+		return
+	}
+
+	// Set the new value
+	details.Portrait = update.Portrait
 
 	// Write out to the file
-	encoder := json.NewEncoder(file)
+	b2, err := json.Marshal(&details)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		a.log.Errorf("error encoding new about info: %s\n", err.Error())
+		return
+	}
 
-	if err := encoder.Encode(&about); err != nil {
+	if err := os.WriteFile(path, b2, 0644); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		a.log.Errorf("error writing about info: %s\n", err.Error())
 		return
 	}
 
 	w.WriteHeader(200)
+}
+
+// UpdateStatement updates the about page designer statement.
+func (a API) UpdateStatement(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+
+	// Decode from request body
+	decoder := json.NewDecoder(r.Body)
+	var update entities.About
+	if err := decoder.Decode(&update); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		a.log.Errorf("error decoding JSON body in about page update request: %s\n", err.Error())
+		return
+	}
+
+	// Open about page info file
+	path := filepath.Join(a.resourcesDir, "about-info.json")
+	b, err := os.ReadFile(path)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		a.log.Errorf("error reading about page file: %s\n", err.Error())
+		return
+	}
+
+	// Decode the file contents
+	var details entities.About
+	if err := json.Unmarshal(b, &details); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		a.log.Errorf("error decoding about page contents: %s\n", err.Error())
+		return
+	}
+
+	// Set the new value
+	details.Statement = update.Statement
+
+	// Write out to the file
+	b2, err := json.Marshal(&details)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		a.log.Errorf("error encoding new about info: %s\n", err.Error())
+		return
+	}
+
+	if err := os.WriteFile(path, b2, 0644); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		a.log.Errorf("error writing about info: %s\n", err.Error())
+		return
+	}
+
+	w.WriteHeader(200)
+}
+
+// UpdateResume updates the about page resume file name.
+func (a API) UpdateResume(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+
+	// Decode from request body
+	decoder := json.NewDecoder(r.Body)
+	var update entities.About
+	if err := decoder.Decode(&update); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		a.log.Errorf("error decoding JSON body in about page update request: %s\n", err.Error())
+		return
+	}
+
+	// Open about page info file
+	path := filepath.Join(a.resourcesDir, "about-info.json")
+	b, err := os.ReadFile(path)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		a.log.Errorf("error reading about page file: %s\n", err.Error())
+		return
+	}
+
+	// Decode the file contents
+	var details entities.About
+	if err := json.Unmarshal(b, &details); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		a.log.Errorf("error decoding about page contents: %s\n", err.Error())
+		return
+	}
+
+	// Set the new value
+	details.Resume = update.Resume
+
+	// Write out to the file
+	b2, err := json.Marshal(&details)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		a.log.Errorf("error encoding new about info: %s\n", err.Error())
+		return
+	}
+
+	if err := os.WriteFile(path, b2, 0644); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		a.log.Errorf("error writing about info: %s\n", err.Error())
+		return
+	}
+
+	w.WriteHeader(200)
+}
+
+// openOrCreate tries to open a file, and creates it if it doesn't exist. In the
+// case that the file is created, an empty about page struct is written out.
+//
+// This has the same use semantics as the file create/open functions in the
+// standard library.
+func openOrCreate(path string) (file *os.File, err error) {
+	file, err = os.OpenFile(path, os.O_RDWR, 0644)
+
+	if err != nil && os.IsNotExist(err) {
+		file, err = os.Create(path)
+		if err != nil {
+			return
+		}
+
+		// Write out empty About page details
+		encoder := json.NewEncoder(file)
+		if err = encoder.Encode(&entities.About{
+			Portrait:  "",
+			Statement: "",
+			Resume:    "",
+		}); err != nil {
+			file.Close()
+			file = nil
+			return
+		}
+
+		return
+	}
+
+	return
 }

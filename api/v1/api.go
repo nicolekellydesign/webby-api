@@ -56,9 +56,9 @@ func (a API) adminRouter() http.Handler {
 	r.Use(middleware.AllowContentType("application/json", "multipart/form-data"))
 
 	r.Route("/about", func(r chi.Router) {
-		r.Put("/", a.UpdateAbout)
-		r.Patch("/portrait", a.ChangePortrait)
-		r.Patch("/resume", a.ChangeResume)
+		r.Patch("/statement", a.UpdateStatement)
+		r.Patch("/portrait", a.UpdatePortrait)
+		r.Patch("/resume", a.UpdateResume)
 	})
 
 	r.Route("/gallery", func(r chi.Router) {

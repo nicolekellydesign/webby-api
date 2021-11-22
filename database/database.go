@@ -294,7 +294,7 @@ func (db DB) RemoveGalleryItem(name string) error {
 	return nil
 }
 
-// Add ProjectImages inserts new image names for a project into the database.
+// AddProjectImages inserts new image names for a project into the database.
 func (db DB) AddProjectImages(galleryID string, files []string) error {
 	tx := db.db.MustBegin()
 
