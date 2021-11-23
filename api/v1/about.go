@@ -37,8 +37,8 @@ func (a API) GetAbout(w http.ResponseWriter, r *http.Request) {
 	encoder.Encode(ret)
 }
 
-// UpdatePortrait updates the about page portrait file name.
-func (a API) UpdatePortrait(w http.ResponseWriter, r *http.Request) {
+// UpdateAbout updates the about page info with new values.
+func (a API) UpdateAbout(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	// Decode from request body
@@ -67,111 +67,11 @@ func (a API) UpdatePortrait(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Set the new value
-	details.Portrait = update.Portrait
+	// Set the new values
+	merged := entities.MergeAbout(details, update)
 
 	// Write out to the file
-	b2, err := json.Marshal(&details)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		a.log.Errorf("error encoding new about info: %s\n", err.Error())
-		return
-	}
-
-	if err := os.WriteFile(path, b2, 0644); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		a.log.Errorf("error writing about info: %s\n", err.Error())
-		return
-	}
-
-	w.WriteHeader(200)
-}
-
-// UpdateStatement updates the about page designer statement.
-func (a API) UpdateStatement(w http.ResponseWriter, r *http.Request) {
-	defer r.Body.Close()
-
-	// Decode from request body
-	decoder := json.NewDecoder(r.Body)
-	var update entities.About
-	if err := decoder.Decode(&update); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		a.log.Errorf("error decoding JSON body in about page update request: %s\n", err.Error())
-		return
-	}
-
-	// Open about page info file
-	path := filepath.Join(a.resourcesDir, "about-info.json")
-	b, err := os.ReadFile(path)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		a.log.Errorf("error reading about page file: %s\n", err.Error())
-		return
-	}
-
-	// Decode the file contents
-	var details entities.About
-	if err := json.Unmarshal(b, &details); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		a.log.Errorf("error decoding about page contents: %s\n", err.Error())
-		return
-	}
-
-	// Set the new value
-	details.Statement = update.Statement
-
-	// Write out to the file
-	b2, err := json.Marshal(&details)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		a.log.Errorf("error encoding new about info: %s\n", err.Error())
-		return
-	}
-
-	if err := os.WriteFile(path, b2, 0644); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		a.log.Errorf("error writing about info: %s\n", err.Error())
-		return
-	}
-
-	w.WriteHeader(200)
-}
-
-// UpdateResume updates the about page resume file name.
-func (a API) UpdateResume(w http.ResponseWriter, r *http.Request) {
-	defer r.Body.Close()
-
-	// Decode from request body
-	decoder := json.NewDecoder(r.Body)
-	var update entities.About
-	if err := decoder.Decode(&update); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		a.log.Errorf("error decoding JSON body in about page update request: %s\n", err.Error())
-		return
-	}
-
-	// Open about page info file
-	path := filepath.Join(a.resourcesDir, "about-info.json")
-	b, err := os.ReadFile(path)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		a.log.Errorf("error reading about page file: %s\n", err.Error())
-		return
-	}
-
-	// Decode the file contents
-	var details entities.About
-	if err := json.Unmarshal(b, &details); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		a.log.Errorf("error decoding about page contents: %s\n", err.Error())
-		return
-	}
-
-	// Set the new value
-	details.Resume = update.Resume
-
-	// Write out to the file
-	b2, err := json.Marshal(&details)
+	b2, err := json.Marshal(&merged)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		a.log.Errorf("error encoding new about info: %s\n", err.Error())
