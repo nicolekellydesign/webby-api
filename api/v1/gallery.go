@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/nicolekellydesign/webby-api/entities"
+	"github.com/nicolekellydesign/webby-api/internal/db"
 )
 
 // AddGalleryItem handles a request to add a new gallery item.
@@ -55,7 +56,7 @@ func (a API) AddGalleryItem(w http.ResponseWriter, r *http.Request) {
 		Caption:     r.FormValue("caption"),
 		ProjectInfo: r.FormValue("project_info"),
 		Thumbnail:   fileName,
-		EmbedURL: entities.NullString{
+		EmbedURL: db.NullString{
 			String: embedURL,
 			Valid:  embedURL != "",
 		},

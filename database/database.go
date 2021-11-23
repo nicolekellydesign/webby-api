@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
+	"time"
 
 	// This is commented because I guess that's all sqlx needs
 	_ "github.com/jackc/pgx/v4/stdlib"
@@ -22,7 +23,8 @@ var tables = []string{
 		user_name TEXT UNIQUE NOT NULL,
 		pwdhash TEXT NOT NULL,
 		protected BOOL NOT NULL,
-		created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+		created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+		last_login TIMESTAMPTZ
 	);`,
 
 	`CREATE TABLE photos (
@@ -368,7 +370,7 @@ func (db DB) GetUser(id string) (*entities.User, error) {
 // GetUsers fetches all of the users from the database.
 func (db DB) GetUsers() ([]*entities.User, error) {
 	ret := make([]*entities.User, 0)
-	if err := db.db.Select(&ret, "SELECT id, user_name, protected, created_at FROM users;"); err != nil {
+	if err := db.db.Select(&ret, "SELECT id, user_name, protected, created_at, last_login FROM users;"); err != nil {
 		return nil, err
 	}
 
@@ -380,6 +382,26 @@ func (db DB) RemoveUser(id string) error {
 	tx := db.db.MustBegin()
 	tx.MustExec("DELETE FROM users WHERE id=$1;", id)
 	if err := tx.Commit(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// UpdateLoginTime sets a user's last login time to `time.Now()`.
+func (db DB) UpdateLoginTime(id uint) error {
+	tx := db.db.MustBegin()
+
+	sql := `UPDATE users
+			SET
+				last_login = $1
+			WHERE
+				id = $2;`
+
+	tx.MustExec(sql, time.Now().UTC(), id)
+
+	if err := tx.Commit(); err != nil {
+		tx.Rollback()
 		return err
 	}
 

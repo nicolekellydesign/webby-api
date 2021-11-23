@@ -100,6 +100,11 @@ func (a API) PerformLogin(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		if err = a.db.UpdateLoginTime(user.ID); err != nil {
+			http.Error(w, dbError, http.StatusInternalServerError)
+			return
+		}
+
 		http.SetCookie(w, &http.Cookie{
 			Name:     "session_token",
 			Value:    session.Token,
