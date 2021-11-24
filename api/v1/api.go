@@ -94,11 +94,11 @@ func (a API) adminOnly(next http.Handler) http.Handler {
 		cookie, err := r.Cookie("session_token")
 		if err != nil {
 			if err == http.ErrNoCookie {
-				http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+				WriteError(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 				return
 			}
 
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			WriteError(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 
@@ -106,13 +106,13 @@ func (a API) adminOnly(next http.Handler) http.Handler {
 		token := cookie.Value
 		session, err := a.db.GetSession(token)
 		if err != nil {
-			http.Error(w, dbError, http.StatusInternalServerError)
+			WriteError(w, dbError, http.StatusInternalServerError)
 			return
 		}
 
 		// Check if we have a session
 		if session == nil {
-			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+			WriteError(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 			return
 		}
 
@@ -122,11 +122,11 @@ func (a API) adminOnly(next http.Handler) http.Handler {
 			expires := session.Created.Add(time.Duration(session.MaxAge) * time.Second)
 			if time.Now().After(expires) {
 				if err = a.db.RemoveSession(token); err != nil {
-					http.Error(w, dbError, http.StatusInternalServerError)
+					WriteError(w, dbError, http.StatusInternalServerError)
 					return
 				}
 
-				http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+				WriteError(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 				return
 			}
 		}

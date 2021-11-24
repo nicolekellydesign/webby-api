@@ -14,13 +14,13 @@ func (a API) AddPhotos(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	var files []string
 	if err := decoder.Decode(&files); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		WriteError(w, err.Error(), http.StatusBadRequest)
 		a.log.Errorf("error decoding request body: %s\n", err.Error())
 		return
 	}
 
 	if err := a.db.AddPhotos(files); err != nil {
-		http.Error(w, dbError, http.StatusInternalServerError)
+		WriteError(w, dbError, http.StatusInternalServerError)
 		return
 	}
 
@@ -31,7 +31,7 @@ func (a API) AddPhotos(w http.ResponseWriter, r *http.Request) {
 func (a API) GetPhotos(w http.ResponseWriter, r *http.Request) {
 	ret, err := a.db.GetPhotos()
 	if err != nil {
-		http.Error(w, dbError, http.StatusInternalServerError)
+		WriteError(w, dbError, http.StatusInternalServerError)
 		return
 	}
 
@@ -55,20 +55,20 @@ func (a API) RemovePhotos(w http.ResponseWriter, r *http.Request) {
 	var files []string
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&files); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		WriteError(w, err.Error(), http.StatusBadRequest)
 		a.log.Errorf("error decoding image files to remove: %s\n", err.Error())
 		return
 	}
 
 	if err := a.db.RemovePhotos(files); err != nil {
-		http.Error(w, dbError, http.StatusInternalServerError)
+		WriteError(w, dbError, http.StatusInternalServerError)
 		return
 	}
 
 	for _, file := range files {
 		path := filepath.Join(a.imageDir, file)
 		if err := os.Remove(path); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			WriteError(w, err.Error(), http.StatusInternalServerError)
 			a.log.Errorf("error removing image: %s\n", err.Error())
 			return
 		}

@@ -24,7 +24,7 @@ func (a API) CheckSession(w http.ResponseWriter, r *http.Request) {
 	token := cookie.Value
 	session, err := a.db.GetSession(token)
 	if err != nil {
-		http.Error(w, dbError, http.StatusInternalServerError)
+		WriteError(w, dbError, http.StatusInternalServerError)
 		return
 	}
 
@@ -43,7 +43,7 @@ func (a API) CheckSession(w http.ResponseWriter, r *http.Request) {
 		expires := session.Created.Add(time.Duration(session.MaxAge) * time.Second)
 		if time.Now().After(expires) {
 			if err = a.db.RemoveSession(token); err != nil {
-				http.Error(w, dbError, http.StatusInternalServerError)
+				WriteError(w, dbError, http.StatusInternalServerError)
 				return
 			}
 
@@ -70,14 +70,14 @@ func (a API) PerformLogin(w http.ResponseWriter, r *http.Request) {
 	var req LoginRequest
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&req); err != nil {
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		WriteError(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 		return
 	}
 
 	// Check if the login should be a success
 	user, err := a.db.GetLogin(req.Username, req.Password)
 	if err != nil {
-		http.Error(w, dbError, http.StatusInternalServerError)
+		WriteError(w, dbError, http.StatusInternalServerError)
 		return
 	}
 
@@ -85,23 +85,23 @@ func (a API) PerformLogin(w http.ResponseWriter, r *http.Request) {
 	if user != nil && (*user != entities.User{}) {
 		session, err := entities.NewSession(user.ID, user.Username, req.Extended)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			WriteError(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
 		// Remove any existing session for this user from the database
 		if err := a.db.RemoveSessionForName(user.Username); err != nil {
-			http.Error(w, dbError, http.StatusInternalServerError)
+			WriteError(w, dbError, http.StatusInternalServerError)
 			return
 		}
 
 		if err = a.db.AddSession(session); err != nil {
-			http.Error(w, dbError, http.StatusInternalServerError)
+			WriteError(w, dbError, http.StatusInternalServerError)
 			return
 		}
 
 		if err = a.db.UpdateLoginTime(user.ID); err != nil {
-			http.Error(w, dbError, http.StatusInternalServerError)
+			WriteError(w, dbError, http.StatusInternalServerError)
 			return
 		}
 
@@ -115,7 +115,7 @@ func (a API) PerformLogin(w http.ResponseWriter, r *http.Request) {
 		})
 		w.WriteHeader(http.StatusOK)
 	} else {
-		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		WriteError(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 	}
 }
 
@@ -129,7 +129,7 @@ func (a API) PerformLogout(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		WriteError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -137,7 +137,7 @@ func (a API) PerformLogout(w http.ResponseWriter, r *http.Request) {
 	token := cookie.Value
 	session, err := a.db.GetSession(token)
 	if err != nil {
-		http.Error(w, dbError, http.StatusInternalServerError)
+		WriteError(w, dbError, http.StatusInternalServerError)
 		return
 	}
 

@@ -11,7 +11,7 @@ import (
 // Upload handles requests to upload files to the server.
 func (a API) Upload(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseMultipartForm(8 * 1024 * 1024); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		WriteError(w, err.Error(), http.StatusBadRequest)
 		a.log.Errorf("error parsing multipart form: %s\n", err.Error())
 		return
 	}
@@ -19,7 +19,7 @@ func (a API) Upload(w http.ResponseWriter, r *http.Request) {
 	// Get the file from the body
 	file, header, err := r.FormFile("file")
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		WriteError(w, err.Error(), http.StatusBadRequest)
 		a.log.Errorf("error getting file from form: %s\n", err.Error())
 		return
 	}
@@ -36,7 +36,7 @@ func (a API) Upload(w http.ResponseWriter, r *http.Request) {
 	// Create our out file
 	out, err := os.Create(outPath)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		WriteError(w, err.Error(), http.StatusInternalServerError)
 		a.log.Errorf("error creating new file: %s\n", err.Error())
 		return
 	}
@@ -44,7 +44,7 @@ func (a API) Upload(w http.ResponseWriter, r *http.Request) {
 
 	// Copy the file from the requset to the out file
 	if _, err := io.Copy(out, file); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		WriteError(w, err.Error(), http.StatusInternalServerError)
 		a.log.Errorf("error copying to file: %s\n", err.Error())
 		return
 	}

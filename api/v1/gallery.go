@@ -17,7 +17,7 @@ import (
 // Requires a valid auth token.
 func (a API) AddGalleryItem(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseMultipartForm(8 * 1024 * 1024); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		WriteError(w, err.Error(), http.StatusBadRequest)
 		a.log.Errorf("error parsing multipart form: %s\n", err.Error())
 		return
 	}
@@ -26,7 +26,7 @@ func (a API) AddGalleryItem(w http.ResponseWriter, r *http.Request) {
 
 	file, header, err := r.FormFile("thumbnail")
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		WriteError(w, err.Error(), http.StatusBadRequest)
 		a.log.Errorf("error getting file from form: %s\n", err.Error())
 		return
 	}
@@ -36,14 +36,14 @@ func (a API) AddGalleryItem(w http.ResponseWriter, r *http.Request) {
 	outPath := filepath.Join(a.imageDir, fileName)
 	out, err := os.Create(outPath)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		WriteError(w, err.Error(), http.StatusInternalServerError)
 		a.log.Errorf("error creating new image file: %s\n", err.Error())
 		return
 	}
 	defer out.Close()
 
 	if _, err := io.Copy(out, file); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		WriteError(w, err.Error(), http.StatusInternalServerError)
 		a.log.Errorf("error copying to file: %s\n", err.Error())
 		return
 	}
@@ -63,7 +63,7 @@ func (a API) AddGalleryItem(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := a.db.AddGalleryItem(galleryItem); err != nil {
-		http.Error(w, dbError, http.StatusInternalServerError)
+		WriteError(w, dbError, http.StatusInternalServerError)
 		a.log.Errorf("error adding gallery item to database: %s\n", err.Error())
 		return
 	}
@@ -80,13 +80,13 @@ func (a API) ChangeThumbnail(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	var req ChangeThumbnailRequest
 	if err := decoder.Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		WriteError(w, err.Error(), http.StatusBadRequest)
 		a.log.Errorf("error decoding JSON body in project update request: %s\n", err.Error())
 		return
 	}
 
 	if err := a.db.ChangeProjectThumbnail(id, req.Thumbnail); err != nil {
-		http.Error(w, dbError, http.StatusInternalServerError)
+		WriteError(w, dbError, http.StatusInternalServerError)
 		return
 	}
 
@@ -99,7 +99,7 @@ func (a API) GetProject(w http.ResponseWriter, r *http.Request) {
 
 	ret, err := a.db.GetProject(id)
 	if err != nil {
-		http.Error(w, dbError, http.StatusInternalServerError)
+		WriteError(w, dbError, http.StatusInternalServerError)
 		return
 	}
 
@@ -118,13 +118,13 @@ func (a API) UpdateProject(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	var project entities.GalleryItem
 	if err := decoder.Decode(&project); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		WriteError(w, err.Error(), http.StatusBadRequest)
 		a.log.Errorf("error decoding JSON body in project update request: %s\n", err.Error())
 		return
 	}
 
 	if err := a.db.UpdateProject(&project); err != nil {
-		http.Error(w, dbError, http.StatusInternalServerError)
+		WriteError(w, dbError, http.StatusInternalServerError)
 		return
 	}
 
@@ -136,7 +136,7 @@ func (a API) UpdateProject(w http.ResponseWriter, r *http.Request) {
 func (a API) GetGalleryItems(w http.ResponseWriter, r *http.Request) {
 	ret, err := a.db.GetGalleryItems()
 	if err != nil {
-		http.Error(w, dbError, http.StatusInternalServerError)
+		WriteError(w, dbError, http.StatusInternalServerError)
 		return
 	}
 
@@ -156,7 +156,7 @@ func (a API) GetGalleryItems(w http.ResponseWriter, r *http.Request) {
 func (a API) RemoveGalleryItem(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	if err := a.db.RemoveGalleryItem(id); err != nil {
-		http.Error(w, dbError, http.StatusInternalServerError)
+		WriteError(w, dbError, http.StatusInternalServerError)
 		return
 	}
 
@@ -172,13 +172,13 @@ func (a API) AddImages(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	var files []string
 	if err := decoder.Decode(&files); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		WriteError(w, err.Error(), http.StatusBadRequest)
 		a.log.Errorf("error decoding request body: %s\n", err.Error())
 		return
 	}
 
 	if err := a.db.AddProjectImages(id, files); err != nil {
-		http.Error(w, dbError, http.StatusInternalServerError)
+		WriteError(w, dbError, http.StatusInternalServerError)
 		a.log.Errorf("error adding project image to database: %s\n", err.Error())
 		return
 	}
@@ -196,13 +196,13 @@ func (a API) RemoveProjectImages(w http.ResponseWriter, r *http.Request) {
 	var files []string
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&files); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		WriteError(w, err.Error(), http.StatusBadRequest)
 		a.log.Errorf("error decoding image files to remove: %s\n", err.Error())
 		return
 	}
 
 	if err := a.db.RemoveProjectImages(galleryID, files); err != nil {
-		http.Error(w, dbError, http.StatusInternalServerError)
+		WriteError(w, dbError, http.StatusInternalServerError)
 		a.log.Errorf("error removing project images from database: %s\n", err.Error())
 		return
 	}
@@ -210,7 +210,7 @@ func (a API) RemoveProjectImages(w http.ResponseWriter, r *http.Request) {
 	for _, file := range files {
 		path := filepath.Join(a.imageDir, file)
 		if err := os.Remove(path); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			WriteError(w, err.Error(), http.StatusInternalServerError)
 			a.log.Errorf("error deleting project image: %s\n", err.Error())
 			return
 		}

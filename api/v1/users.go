@@ -15,26 +15,26 @@ func (a API) AddUser(w http.ResponseWriter, r *http.Request) {
 	var req AddUserRequest
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&req); err != nil {
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		WriteError(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 		return
 	}
 
 	users, err := a.db.GetUsers()
 	if err != nil {
-		http.Error(w, dbError, http.StatusInternalServerError)
+		WriteError(w, dbError, http.StatusInternalServerError)
 		return
 	}
 
 	// Make sure usernames are unique
 	for _, user := range users {
 		if user.Username == req.Username {
-			http.Error(w, "username already exists", http.StatusBadRequest)
+			WriteError(w, "username already exists", http.StatusBadRequest)
 			return
 		}
 	}
 
 	if err := a.db.AddUser(req.Username, req.Password, false); err != nil {
-		http.Error(w, dbError, http.StatusInternalServerError)
+		WriteError(w, dbError, http.StatusInternalServerError)
 		return
 	}
 
@@ -45,7 +45,7 @@ func (a API) AddUser(w http.ResponseWriter, r *http.Request) {
 func (a API) GetUsers(w http.ResponseWriter, r *http.Request) {
 	ret, err := a.db.GetUsers()
 	if err != nil {
-		http.Error(w, dbError, http.StatusInternalServerError)
+		WriteError(w, dbError, http.StatusInternalServerError)
 		return
 	}
 
@@ -67,28 +67,28 @@ func (a API) RemoveUser(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie("session_token")
 	if err != nil {
 		if err == http.ErrNoCookie {
-			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+			WriteError(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 			return
 		}
 
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		WriteError(w, err.Error(), http.StatusBadRequest)
 	}
 
 	// We don't want users to be able to delete themselves, so
 	// we have to get the session to check the user ID.
 	session, err := a.db.GetSession(cookie.Value)
 	if err != nil {
-		http.Error(w, dbError, http.StatusInternalServerError)
+		WriteError(w, dbError, http.StatusInternalServerError)
 	}
 
 	converted, err := strconv.ParseUint(id, 10, 32)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		WriteError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	if session.ID == uint(converted) {
-		http.Error(w, "can't delete yourself", http.StatusBadRequest)
+		WriteError(w, "can't delete yourself", http.StatusBadRequest)
 		return
 	}
 
@@ -96,17 +96,17 @@ func (a API) RemoveUser(w http.ResponseWriter, r *http.Request) {
 	// protected user, in which case they can't.
 	user, err := a.db.GetUser(id)
 	if err != nil {
-		http.Error(w, dbError, http.StatusInternalServerError)
+		WriteError(w, dbError, http.StatusInternalServerError)
 		return
 	}
 
 	if user.Protected {
-		http.Error(w, "protected users cannot be removed", http.StatusBadRequest)
+		WriteError(w, "protected users cannot be removed", http.StatusBadRequest)
 		return
 	}
 
 	if err := a.db.RemoveUser(id); err != nil {
-		http.Error(w, dbError, http.StatusInternalServerError)
+		WriteError(w, dbError, http.StatusInternalServerError)
 		return
 	}
 
