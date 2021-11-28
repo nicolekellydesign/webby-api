@@ -54,9 +54,7 @@ func (a API) GetUsers(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(200)
 
 	encoder := json.NewEncoder(w)
-	encoder.Encode(UsersResponse{
-		ret,
-	})
+	encoder.Encode(&ret)
 }
 
 // RemoveUser deletes a user from the database, and invalidates any

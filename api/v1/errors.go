@@ -6,9 +6,9 @@ import (
 	"net/http"
 )
 
-// HttpError holds information about an error that will be sent to the client in
+// HTTPError holds information about an error that will be sent to the client in
 // an HTTP response.
-type HttpError struct {
+type HTTPError struct {
 	Code    int    `json:"code"`
 	Message string `json:"message"`
 }
@@ -18,7 +18,7 @@ func WriteError(w http.ResponseWriter, message string, code int) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
 
-	e := HttpError{
+	e := HTTPError{
 		Code:    code,
 		Message: message,
 	}

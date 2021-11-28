@@ -40,9 +40,7 @@ func (a API) GetPhotos(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(200)
 
 	encoder := json.NewEncoder(w)
-	encoder.Encode(PhotosResponse{
-		ret,
-	})
+	encoder.Encode(&ret)
 }
 
 // RemovePhotos handles a request to remove a list of files from the

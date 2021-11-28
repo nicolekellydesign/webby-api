@@ -71,6 +71,7 @@ func (a API) PerformLogin(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&req); err != nil {
 		WriteError(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		a.log.Errorf("error decoding login body: %s\n", err.Error())
 		return
 	}
 
@@ -86,6 +87,7 @@ func (a API) PerformLogin(w http.ResponseWriter, r *http.Request) {
 		session, err := entities.NewSession(user.ID, user.Username, req.Extended)
 		if err != nil {
 			WriteError(w, err.Error(), http.StatusInternalServerError)
+			a.log.Errorf("error creating new session: %s\n", err.Error())
 			return
 		}
 
@@ -115,7 +117,7 @@ func (a API) PerformLogin(w http.ResponseWriter, r *http.Request) {
 		})
 		w.WriteHeader(http.StatusOK)
 	} else {
-		WriteError(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		WriteError(w, "Invalid login credentials", http.StatusUnauthorized)
 	}
 }
 

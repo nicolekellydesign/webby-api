@@ -145,9 +145,7 @@ func (a API) GetGalleryItems(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(200)
 
 	encoder := json.NewEncoder(w)
-	encoder.Encode(GalleryResponse{
-		ret,
-	})
+	encoder.Encode(&ret)
 }
 
 // RemoveGalleryItem handles a request to remove a gallery item.

@@ -84,7 +84,11 @@ func (a API) UpdateAbout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Send back the response
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
+	encoder := json.NewEncoder(w)
+	encoder.Encode(&merged)
 }
 
 // openOrCreate tries to open a file, and creates it if it doesn't exist. In the
