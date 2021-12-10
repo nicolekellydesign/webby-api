@@ -48,13 +48,13 @@ func (a API) AddGalleryItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	embedURL := r.FormValue("embed_url")
+	embedURL := r.FormValue("embedURL")
 
 	galleryItem := entities.GalleryItem{
 		Name:        name,
 		Title:       r.FormValue("title"),
 		Caption:     r.FormValue("caption"),
-		ProjectInfo: r.FormValue("project_info"),
+		ProjectInfo: r.FormValue("projectInfo"),
 		Thumbnail:   fileName,
 		EmbedURL: db.NullString{
 			String: embedURL,
