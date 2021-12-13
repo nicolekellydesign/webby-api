@@ -91,12 +91,6 @@ func (a API) PerformLogin(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// Remove any existing session for this user from the database
-		if err := a.db.RemoveSessionForName(user.Username); err != nil {
-			WriteError(w, dbError, http.StatusInternalServerError)
-			return
-		}
-
 		if err = a.db.AddSession(session); err != nil {
 			WriteError(w, dbError, http.StatusInternalServerError)
 			return

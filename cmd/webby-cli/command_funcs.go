@@ -66,20 +66,6 @@ func RemoveUserFunc(root *cmd.Root, c *cmd.Sub) {
 	log.Goodln("User removed from the database")
 }
 
-// InitFunc initializes our database schema.
-func InitFunc(root *cmd.Root, c *cmd.Sub) {
-	db, err := database.Connect(dbUser, dbPassword, dbName)
-	if err != nil {
-		log.Fatalf("Unable to connect to the database: %s\n", err)
-	}
-
-	if err = db.InitSchema(); err != nil {
-		log.Fatalf("Error initializing tables: %s\n", err)
-	}
-
-	log.Goodln("Database schema created successfully")
-}
-
 // ServeFunc opens a database connection and starts serving our HTTP endpoints.
 func ServeFunc(root *cmd.Root, c *cmd.Sub) {
 	// Start our database connection

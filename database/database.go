@@ -2,11 +2,15 @@ package database
 
 import (
 	"database/sql"
+	"embed"
 	"fmt"
 	"strings"
 	"time"
 
-	// This is commented because I guess that's all sqlx needs
+	"github.com/golang-migrate/migrate/v4"
+	"github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/golang-migrate/migrate/v4/source/iofs"
 	_ "github.com/jackc/pgx/v4/stdlib"
 	"github.com/jmoiron/sqlx"
 	"github.com/nicolekellydesign/webby-api/entities"
@@ -17,56 +21,8 @@ type DB struct {
 	db *sqlx.DB
 }
 
-var tables = []string{
-	`CREATE TABLE users (
-		id SERIAL PRIMARY KEY,
-		user_name TEXT UNIQUE NOT NULL,
-		pwdhash TEXT NOT NULL,
-		protected BOOL NOT NULL,
-		created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-		last_login TIMESTAMPTZ
-	);`,
-
-	`CREATE TABLE photos (
-		id SERIAL PRIMARY KEY,
-		file_name TEXT NOT NULL
-	);`,
-
-	`CREATE TABLE gallery_items (
-		id TEXT UNIQUE NOT NULL PRIMARY KEY,
-		title TEXT NOT NULL,
-		caption TEXT NOT NULL,
-		project_info TEXT NOT NULL,
-		thumbnail TEXT NOT NULL,
-		embed_url TEXT
-	);`,
-
-	`CREATE TABLE project_images (
-		id SERIAL PRIMARY KEY,
-		gallery_id TEXT NOT NULL,
-		file_name VARCHAR(255) NOT NULL,
-		CONSTRAINT fk_gallery
-			FOREIGN KEY(gallery_id)
-			REFERENCES gallery_items(id)
-			ON DELETE CASCADE
-	);`,
-
-	`CREATE TABLE sessions (
-		token TEXT UNIQUE NOT NULL PRIMARY KEY,
-		user_name TEXT UNIQUE NOT NULL,
-		user_id SERIAL UNIQUE NOT NULL,
-		created TIMESTAMPTZ NOT NULL,
-		max_age BIGINT NOT NULL,
-		CONSTRAINT fk_user_name
-			FOREIGN KEY(user_name)
-			REFERENCES users(user_name)
-			ON DELETE CASCADE,
-		CONSTRAINT fk_user_id
-			FOREIGN KEY(user_id)
-			REFERENCES users(id)
-			ON DELETE CASCADE
-	);`,
-}
+//go:embed migrations/*.sql
+var fs embed.FS
 
 // Connect opens a connection to the database and creates the
 // table structure.
@@ -75,6 +31,27 @@ func Connect(username, password, database string) (*DB, error) {
 	db, err := sqlx.Connect("pgx", source)
 	if err != nil {
 		return nil, err
+	}
+
+	driver, err := postgres.WithInstance(db.DB, &postgres.Config{})
+	if err != nil {
+		return nil, err
+	}
+
+	dir, err := iofs.New(fs, "migrations")
+	if err != nil {
+		return nil, err
+	}
+
+	migrator, err := migrate.NewWithInstance("iofs", dir, "postgres", driver)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := migrator.Up(); err != nil {
+		if err != migrate.ErrNoChange {
+			return nil, err
+		}
 	}
 
 	self := DB{
@@ -88,25 +65,6 @@ func Connect(username, password, database string) (*DB, error) {
 // queries to finish.
 func (db DB) Close() {
 	db.db.Close()
-}
-
-// InitSchema creates our tables in the database.
-func (db DB) InitSchema() error {
-	tx, err := db.db.Begin()
-	if err != nil {
-		return err
-	}
-
-	for _, table := range tables {
-		tx.Exec(table)
-	}
-
-	if err := tx.Commit(); err != nil {
-		tx.Rollback()
-		return err
-	}
-
-	return nil
 }
 
 // AddPhotos inserts new photo image names into the database.
@@ -460,20 +418,6 @@ func (db DB) GetSession(token string) (*entities.Session, error) {
 func (db DB) RemoveSession(token string) error {
 	tx := db.db.MustBegin()
 	tx.MustExec("DELETE FROM sessions WHERE token=$1;", token)
-
-	if err := tx.Commit(); err != nil {
-		tx.Rollback()
-		return err
-	}
-
-	return nil
-}
-
-// RemoveSessionForName deletes a session from the database that is
-// tied to a particular username.
-func (db DB) RemoveSessionForName(username string) error {
-	tx := db.db.MustBegin()
-	tx.MustExec("DELETE FROM sessions WHERE user_name=$1;", username)
 
 	if err := tx.Commit(); err != nil {
 		tx.Rollback()

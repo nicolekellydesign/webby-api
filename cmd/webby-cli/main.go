@@ -96,13 +96,6 @@ func main() {
 	})
 
 	cmd.Register(&cmd.Sub{
-		Name:  "init",
-		Alias: "i",
-		Short: "Initialize the database structure",
-		Run:   InitFunc,
-	})
-
-	cmd.Register(&cmd.Sub{
 		Name:  "serve",
 		Alias: "s",
 		Short: "Start serving the API endpoints",
