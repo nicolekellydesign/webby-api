@@ -14,4 +14,5 @@ type User struct {
 	Protected bool        `json:"protected" db:"protected"`
 	CreatedAt time.Time   `json:"createdAt" db:"created_at"`
 	LastLogin db.NullTime `json:"lastLogin,omitempty" db:"last_login"`
+	Sessions  db.NullInt  `json:"sessions,omitempty" db:"sessions"`
 }

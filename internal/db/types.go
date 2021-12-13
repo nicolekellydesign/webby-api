@@ -7,6 +7,53 @@ import (
 	"time"
 )
 
+// NullInt wraps sql.NullInt32 and implements some interfaces to make life easier.
+type NullInt sql.NullInt32
+
+// MarshalJSON implements the JSON marshal interface for NullInt.
+func (i *NullInt) MarshalJSON() ([]byte, error) {
+	if !i.Valid {
+		i.Int32 = 0
+		i.Valid = true
+	}
+
+	return json.Marshal(i.Int32)
+}
+
+// UnmarshalJSON implements the JSON unmarshal interface for NullInt.
+func (i *NullInt) UnmarshalJSON(data []byte) error {
+	var num *int32
+
+	if err := json.Unmarshal(data, &num); err != nil {
+		return err
+	}
+
+	if num != nil {
+		i.Int32 = *num
+		i.Valid = true
+	} else {
+		i.Valid = false
+	}
+
+	return nil
+}
+
+// Scan implements the Scanner interface for NullInt.
+func (i *NullInt) Scan(value interface{}) error {
+	var num sql.NullInt32
+	if err := num.Scan(value); err != nil {
+		return err
+	}
+
+	if reflect.TypeOf(value) == nil {
+		*i = NullInt{num.Int32, false}
+	} else {
+		*i = NullInt{num.Int32, true}
+	}
+
+	return nil
+}
+
 // NullString wraps sql.NullString and implements some interfaces to make life easier.
 type NullString sql.NullString
 
