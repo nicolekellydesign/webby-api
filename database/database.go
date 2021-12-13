@@ -323,7 +323,7 @@ func (db DB) GetUser(id string) (*entities.User, error) {
 			users.id, users.user_name, users.protected, users.created_at, users.last_login,
 			COUNT(sessions.user_id) as sessions
 		FROM users
-		INNER JOIN sessions ON sessions.user_id = users.id
+		LEFT JOIN sessions ON sessions.user_id = users.id
 		WHERE users.id = $1
 		GROUP BY users.id;
 	`
@@ -345,7 +345,7 @@ func (db DB) GetUsers() ([]*entities.User, error) {
 			users.id, users.user_name, users.protected, users.created_at, users.last_login,
 			COUNT(sessions.user_id) as sessions
 		FROM users
-		INNER JOIN sessions ON sessions.user_id = users.id
+		LEFT JOIN sessions ON sessions.user_id = users.id
 		GROUP BY users.id
 		ORDER BY users.id;
 	`
