@@ -133,10 +133,10 @@ func (db DB) AddGalleryItem(item entities.GalleryItem) error {
 		caption,
 		project_info,
 		thumbnail,
-		embed_url
+		video_key
 	) VALUES ($1, $2, $3, $4, $5, $6);`
 
-	tx.MustExec(sql, item.Name, item.Title, item.Caption, item.ProjectInfo, item.Thumbnail, item.EmbedURL.String)
+	tx.MustExec(sql, item.Name, item.Title, item.Caption, item.ProjectInfo, item.Thumbnail, item.VideoKey.String)
 
 	if err := tx.Commit(); err != nil {
 		tx.Rollback()
@@ -163,7 +163,7 @@ func (db DB) ChangeProjectThumbnail(name, newThumb string) error {
 func (db DB) GetProject(name string) (*entities.GalleryItem, error) {
 	var project entities.GalleryItem
 
-	query := "SELECT title, caption, project_info, thumbnail, embed_url FROM gallery_items WHERE id=$1;"
+	query := "SELECT title, caption, project_info, thumbnail, video_key FROM gallery_items WHERE id=$1;"
 	if err := db.db.Get(&project, query, name); err != nil {
 		return nil, err
 	}
@@ -193,12 +193,12 @@ func (db DB) UpdateProject(project *entities.GalleryItem) error {
 		title = $1,
 		caption = $2,
 		project_info = $3,
-		embed_url = $4
+		video_key = $4
 	WHERE
 		id = $5;
 	`
 
-	tx.MustExec(sql, project.Title, project.Caption, project.ProjectInfo, project.EmbedURL.String, project.Name)
+	tx.MustExec(sql, project.Title, project.Caption, project.ProjectInfo, project.VideoKey.String, project.Name)
 	if err := tx.Commit(); err != nil {
 		tx.Rollback()
 		return err
@@ -217,7 +217,7 @@ func (db DB) GetGalleryItems() ([]*entities.GalleryItem, error) {
 		caption,
 		project_info,
 		thumbnail,
-		embed_url
+		video_key
 	FROM gallery_items;`
 
 	if err := db.db.Select(&items, query); err != nil {

@@ -9,6 +9,6 @@ type GalleryItem struct {
 	Caption     string        `json:"caption" db:"caption"`
 	ProjectInfo string        `json:"projectInfo" db:"project_info"`
 	Thumbnail   string        `json:"thumbnail" db:"thumbnail"`
-	EmbedURL    db.NullString `json:"embedURL,omitempty" db:"embed_url"`
+	VideoKey    db.NullString `json:"videoKey,omitempty" db:"video_key"`
 	Images      []string      `json:"images"`
 }
