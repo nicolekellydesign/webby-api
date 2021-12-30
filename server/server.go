@@ -42,7 +42,10 @@ func New(port int, db *database.DB, log *waterlog.WaterLog, uploadDir string) *L
 
 // Serve sets up our endpoint handlers and begins listening.
 func (l Listener) Serve() {
-	api := v1.NewAPI(l.db, l.log, l.uploadDir)
+	api, err := v1.NewAPI(l.db, l.log, l.uploadDir)
+	if err != nil {
+		l.log.Fatalf("error initializing API: %s\n", err.Error())
+	}
 
 	l.router.Mount("/api/v1", api.Routes())
 
