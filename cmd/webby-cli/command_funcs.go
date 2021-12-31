@@ -74,17 +74,29 @@ func ServeFunc(root *cmd.Root, c *cmd.Sub) {
 		log.Fatalf("Unable to connect to the database: %s\n", err)
 	}
 
+	errs := make(chan error, 1)
+
 	// Start our API endpoint listener
 	log.Infoln("Starting the API endpoint listener")
-	server := server.New(5000, db, log, rootDir)
+	server := server.New(5000, db, log, rootDir, errs)
 
 	go server.Serve()
 	log.Infoln("Now listening on 'localhost:5000'")
 
-	// Wait until told to close
+	// Create a channel to listen for OS signals so we know
+	// when to close.
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
-	<-sc
+
+	// Wait and block until either an error is received
+	// or an OS signal is received telling us to close.
+	select {
+	case err := <-errs:
+		log.Errorf("Error while serving: %s\n", err.Error())
+		break
+	case <-sc:
+		break
+	}
 
 	// Cleanup on close
 	log.Println("")

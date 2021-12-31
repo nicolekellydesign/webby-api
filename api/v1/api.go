@@ -2,8 +2,6 @@ package v1
 
 import (
 	"net/http"
-	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/DataDrake/waterlog"
@@ -23,35 +21,13 @@ type API struct {
 }
 
 // NewAPI creates a new v1 API.
-func NewAPI(db *database.DB, log *waterlog.WaterLog, rootDir string) (*API, error) {
-	imagesDir := filepath.Join(rootDir, "images")
-	if _, err := os.Stat(imagesDir); err != nil {
-		if os.IsNotExist(err) {
-			log.Infoln("images directory not found! creating...")
-			if err2 := os.Mkdir(imagesDir, 0755); err2 != nil {
-				return nil, err2
-			}
-			log.Goodln("images directory created")
-		}
-	}
-
-	resourcesDir := filepath.Join(rootDir, "resources")
-	if _, err := os.Stat(resourcesDir); err != nil {
-		if os.IsNotExist(err) {
-			log.Infoln("resources directory not found! creating...")
-			if err2 := os.Mkdir(resourcesDir, 0755); err2 != nil {
-				return nil, err2
-			}
-			log.Goodln("resources directory created")
-		}
-	}
-
+func NewAPI(db *database.DB, log *waterlog.WaterLog, imagesDir, resourcesDir string) *API {
 	return &API{
 		db,
 		log,
 		imagesDir,
 		resourcesDir,
-	}, nil
+	}
 }
 
 // Routes sets up our API routes.
