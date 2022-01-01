@@ -48,7 +48,7 @@ func (a API) AddGalleryItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	video_key := r.FormValue("video_key")
+	videoKey := r.FormValue("video_key")
 
 	galleryItem := entities.GalleryItem{
 		Name:        name,
@@ -57,8 +57,8 @@ func (a API) AddGalleryItem(w http.ResponseWriter, r *http.Request) {
 		ProjectInfo: r.FormValue("projectInfo"),
 		Thumbnail:   fileName,
 		VideoKey: db.NullString{
-			String: video_key,
-			Valid:  video_key != "",
+			String: videoKey,
+			Valid:  videoKey != "",
 		},
 	}
 
